@@ -1,4 +1,4 @@
-# Brevo Conversions API Tag for Google Tag Manager Server Container
+# Brevo Tag for server Google Tag Manager
 
 Brevo tag for server Google Tag Manager container allows to set up website and Brevo integration through the sGTM.
 
