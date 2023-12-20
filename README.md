@@ -16,6 +16,8 @@ Brevo tag for server Google Tag Manager container allows to set up website and B
 
 **Page** - page name (example Checkout page).
 
+Useful links: https://stape.io/blog/brevo-tag-for-server-google-tag-manager
+
 ## Open Source
 
 Brevo Tag for GTM Server Side is developing and maintained by [Stape Team](https://stape.io/) under the Apache 2.0 license.
