@@ -1,24 +1,26 @@
 # Brevo Tag for server Google Tag Manager
 
-Brevo tag for server Google Tag Manager container allows to set up website and Brevo integration through the sGTM.
+The Brevo tag for the server Google Tag Manager (sGTM) container enables seamless integration between your website and Brevo.
 
-**Track page view** - every time a user navigates to a new page or reloads the current page, a “page view” is tracked. This data can be essential for understanding website traffic, user behavior, and site engagement.
+**Track page view** - captures every time a user navigates to a new page or reloads the current page. This helps analyze website traffic, user behavior, and engagement.
 
-**Track event** - track user interactions with content. Examples include interactions such as form submissions, button clicks, or video playbacks.
+**Track event** - tracks user interactions with content, such as form submissions, button clicks, or video playbacks.  
 
-**Track link click** - record when users click on hyperlinks present on a web page.
+**Track link click** - records when users click on hyperlinks within a web page.
 
-**Identify the user** - allow the system to recognize and differentiate individual users who interact with the website. It can be based on a unique identifier, such as a user ID or a cookie.
+**Identify the user** - allows the system to recognize and differentiate individual users who interact with the website. It can be based on a unique identifier, such as a user ID or a cookie.
 
-**Client Key** - You can find the client_key in the Javascript code. Javascript code is located in the Automation menu in your Brevo account under Javascript (JS) Tracker.
+**Client Key** - retrieve your Client Key based on the API version you are using:
+  - API v2: https://developers.brevo.com/docs/tracker-rest-implementation#authentication
+  - API v3: https://developers.brevo.com/docs/getting-started#using-your-api-key-to-authenticate
 
 **Email** - email to identify the user.
 
-**Page** - page name (example Checkout page).
+**Page** - the name of the page being tracked (e.g., `"Checkout"`).
 
-### Useful links:
+## Useful resource
 - https://stape.io/blog/brevo-tag-for-server-google-tag-manager
 
 ## Open Source
 
-Brevo Tag for GTM Server Side is developing and maintained by [Stape Team](https://stape.io/) under the Apache 2.0 license.
+Brevo Tag for GTM Server Side is developed and maintained by [Stape Team](https://stape.io/) under the Apache 2.0 license.
