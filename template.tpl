@@ -88,7 +88,7 @@ ___TEMPLATE_PARAMETERS___
         "type": "NON_EMPTY"
       }
     ],
-    "help": "How to get it for:\n\u003cbr\u003e\n\u003cbr\u003e\nv2: \u003ca href\u003d\"https://developers.brevo.com/docs/tracker-rest-implementation#authentication\" target\u003d\"_blank\"\u003eLearn more\u003c/a\u003e.\n\u003cbr\u003e\n\u003cbr\u003e\nv2: \u003ca href\u003d\"https://developers.brevo.com/docs/getting-started#using-your-api-key-to-authenticate\" target\u003d\"_blank\"\u003eLearn more\u003c/a\u003e."
+    "help": "How to get it for:\n\u003cbr\u003e\n\u003cbr\u003e\nv2: \u003ca href\u003d\"https://developers.brevo.com/docs/tracker-rest-implementation#authentication\" target\u003d\"_blank\"\u003eLearn more\u003c/a\u003e.\n\u003cbr\u003e\n\u003cbr\u003e\nv3: \u003ca href\u003d\"https://developers.brevo.com/docs/getting-started#using-your-api-key-to-authenticate\" target\u003d\"_blank\"\u003eLearn more\u003c/a\u003e."
   },
   {
     "type": "TEXT",
