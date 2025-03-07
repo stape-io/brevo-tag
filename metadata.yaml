@@ -1,4 +1,6 @@
 homepage: 'https://stape.io/'
 versions:
+  - sha: d42dcd4d6365f70e985940a0c92ea4b2766cce10
+    changeNotes: Added multiple API versions support. Added tests.
   - sha: 9fdaf4489dd21e506cc1ded5f1ca383f8cafd44d
     changeNotes: Initial release.

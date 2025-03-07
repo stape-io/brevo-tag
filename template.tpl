@@ -35,6 +35,25 @@ ___TEMPLATE_PARAMETERS___
 
 [
   {
+    "type": "SELECT",
+    "name": "apiVersion",
+    "displayName": "API Version",
+    "macrosInSelect": false,
+    "selectItems": [
+      {
+        "value": "v2",
+        "displayValue": "v2"
+      },
+      {
+        "value": "v3",
+        "displayValue": "v3"
+      }
+    ],
+    "simpleValueType": true,
+    "defaultValue": "v2",
+    "help": "Only change the API version if necessary, as it may disrupt your existing implementation. Be sure to test thoroughly before making any modifications."
+  },
+  {
     "type": "RADIO",
     "name": "type",
     "displayName": "Type",
@@ -68,7 +87,8 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "NON_EMPTY"
       }
-    ]
+    ],
+    "help": "How to get it for:\n\u003cbr\u003e\n\u003cbr\u003e\nv2: \u003ca href\u003d\"https://developers.brevo.com/docs/tracker-rest-implementation#authentication\" target\u003d\"_blank\"\u003eLearn more\u003c/a\u003e.\n\u003cbr\u003e\n\u003cbr\u003e\nv3: \u003ca href\u003d\"https://developers.brevo.com/docs/getting-started#using-your-api-key-to-authenticate\" target\u003d\"_blank\"\u003eLearn more\u003c/a\u003e."
   },
   {
     "type": "TEXT",
@@ -76,7 +96,7 @@ ___TEMPLATE_PARAMETERS___
     "displayName": "Email",
     "simpleValueType": true,
     "alwaysInSummary": false,
-    "help": "Email of the user"
+    "help": "Email of the user. \u003cbr\u003e\u003cbr\u003e v2: required. \u003cbr\u003e\u003cbr\u003e v3: optional, but at least one user identifier must be sent. Check \u003ci\u003eCustomer Identifiers\u003c/i\u003e section below."
   },
   {
     "type": "TEXT",
@@ -147,7 +167,7 @@ ___TEMPLATE_PARAMETERS___
     "name": "useOptimisticScenario",
     "checkboxText": "Use Optimistic Scenario",
     "simpleValueType": true,
-    "help": "The tag will call gtmOnSuccess() without waiting for a response from the API"
+    "help": "The tag will call gtmOnSuccess() without waiting for a response from the API. This will speed up sGTM response time however your tag will always return the status fired successfully even in case it is not."
   },
   {
     "type": "GROUP",
@@ -179,6 +199,61 @@ ___TEMPLATE_PARAMETERS___
       {
         "paramName": "type",
         "paramValue": "identify",
+        "type": "EQUALS"
+      }
+    ]
+  },
+  {
+    "type": "GROUP",
+    "name": "customerIdentifiersGroup",
+    "displayName": "Customer Identifiers",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "LABEL",
+        "name": "customerIdentifiersGroupHelpText",
+        "displayName": "Only for v3. \u003cbr\u003e Identifies the contact associated with the event. At least one identifier is required. Check \u003ci\u003eEmail\u003c/i\u003e field above."
+      },
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "customerIdentifiers",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "",
+            "displayName": "Name",
+            "name": "name",
+            "type": "SELECT",
+            "isUnique": true,
+            "selectItems": [
+              {
+                "value": "ext_id",
+                "displayValue": "External ID"
+              },
+              {
+                "value": "phone_id",
+                "displayValue": "Phone Number"
+              }
+            ],
+            "macrosInSelect": false
+          },
+          {
+            "defaultValue": "",
+            "displayName": "Value",
+            "name": "value",
+            "type": "TEXT",
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "enablingConditions": [
+      {
+        "paramName": "apiVersion",
+        "paramValue": "v3",
         "type": "EQUALS"
       }
     ]
@@ -253,6 +328,31 @@ ___TEMPLATE_PARAMETERS___
     ]
   },
   {
+    "type": "GROUP",
+    "name": "consentSettingsGroup",
+    "displayName": "Consent Settings",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "RADIO",
+        "name": "adStorageConsent",
+        "displayName": "",
+        "radioItems": [
+          {
+            "value": "optional",
+            "displayValue": "Send data always"
+          },
+          {
+            "value": "required",
+            "displayValue": "Send data in case marketing consent given"
+          }
+        ],
+        "simpleValueType": true,
+        "defaultValue": "optional"
+      }
+    ]
+  },
+  {
     "displayName": "Logs Settings",
     "name": "logsGroup",
     "groupStyle": "ZIPPY_CLOSED",
@@ -286,6 +386,7 @@ ___TEMPLATE_PARAMETERS___
 ___SANDBOXED_JS_FOR_SERVER___
 
 const sendHttpRequest = require('sendHttpRequest');
+const getAllEventData = require('getAllEventData');
 const JSON = require('JSON');
 const getCookieValues = require('getCookieValues');
 const setCookie = require('setCookie');
@@ -293,46 +394,66 @@ const getContainerVersion = require('getContainerVersion');
 const logToConsole = require('logToConsole');
 const getRequestHeader = require('getRequestHeader');
 const makeTableMap = require('makeTableMap');
+const getType = require('getType');
 
 const isLoggingEnabled = determinateIsLoggingEnabled();
 const traceId = isLoggingEnabled ? getRequestHeader('trace-id') : undefined;
 
-let email = data.email;
+const eventData = getAllEventData();
 
-if (!email) {
-  email = getCookieValues('brevo_email')[0];
-} else {
-  storeCookie('email', email);
+if (!isConsentGivenOrNotRequired()) {
+  return data.gtmOnSuccess();
 }
 
-if (data.type === 'trackPage') {
-  sendEvent('page_view', {
-    'properties': data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-    'email': email,
-    'page': data.page
-  });
-} else if (data.type === 'trackEvent') {
-  sendEvent(data.event, {
-    'properties': data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-    'eventData': data.propertiesEvent ? makeTableMap(data.propertiesEvent, 'name', 'value') : {},
-    'email': email,
-    'event': data.event
-  });
-} else if (data.type === 'trackLink') {
-  sendEvent('link', {
-    'properties': data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-    'email': email,
-    'link': data.link
-  });
-} else {
-  sendEvent('identify', {
-    'attributes': data.customerProperties ? makeTableMap(data.customerProperties, 'name', 'value') : {},
-    'email': email
-  });
+const url = eventData.page_location || getRequestHeader('referer');
+
+if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) {
+  return data.gtmOnSuccess();
+}
+
+// Fallback to V2, which is the one being used in the Gallery when this change was made.
+const API_VERSION = data.apiVersion || 'v2';
+
+let email = data.email;
+if (data.storeEmail) {
+  if (!email) email = getCookieValues('brevo_email')[0];
+  else storeCookie('email', email);
+}
+
+switch (data.type) {
+  case 'trackPage':
+    sendEvent('page_view', formatEventPayloadByApiVersion('trackPage'));
+    break;
+  case 'trackEvent':
+    sendEvent(data.event, formatEventPayloadByApiVersion('trackEvent'));
+    break;
+  case 'trackLink':
+    sendEvent('link', formatEventPayloadByApiVersion('trackLink'));
+    break;
+  case 'identify':
+    sendEvent('identify', formatEventPayloadByApiVersion('identify'));
+    break;
+  default:
+    data.gtmOnSuccess();
 }
 
 function sendEvent(eventName, brevoEventData) {
-  let url = 'https://in-automate.brevo.com/api/v2/' + data.type;
+  if (areThereRequiredFieldsMissing(brevoEventData)) {
+    if (isLoggingEnabled) {
+      logToConsole({
+        Name: 'Brevo',
+        Type: 'Message',
+        TraceId: traceId,
+        EventName: eventName,
+        Message: 'Request was not sent. API ' + API_VERSION,
+        Reason:
+          'One or more fields are missing: v2: Email; v3: Email, Phone Number or External ID.'
+      });
+    }
+    return data.gtmOnFailure();
+  }
+
+  const url = getRequestUrl();
 
   if (isLoggingEnabled) {
     logToConsole(
@@ -343,7 +464,7 @@ function sendEvent(eventName, brevoEventData) {
         EventName: eventName,
         RequestMethod: 'POST',
         RequestUrl: url,
-        RequestBody: brevoEventData,
+        RequestBody: brevoEventData
       })
     );
   }
@@ -359,7 +480,7 @@ function sendEvent(eventName, brevoEventData) {
           EventName: eventName,
           ResponseStatusCode: statusCode,
           ResponseHeaders: headers,
-          ResponseBody: body,
+          ResponseBody: body
         })
       );
 
@@ -372,11 +493,7 @@ function sendEvent(eventName, brevoEventData) {
       }
     },
     {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'ma-key': data.clientKey,
-      },
+      headers: getRequestHeaders(),
       method: 'POST'
     },
     JSON.stringify(brevoEventData)
@@ -387,6 +504,140 @@ function sendEvent(eventName, brevoEventData) {
   }
 }
 
+function formatEventPayloadByApiVersion(event) {
+  const eventPayloadByApiVersion = {
+    v2: {
+      trackPage: () => ({
+        properties: data.properties
+          ? makeTableMap(data.properties, 'name', 'value')
+          : {},
+        email: email,
+        page: data.page
+      }),
+      trackEvent: () => ({
+        properties: data.properties
+          ? makeTableMap(data.properties, 'name', 'value')
+          : {},
+        eventData: data.propertiesEvent
+          ? makeTableMap(data.propertiesEvent, 'name', 'value')
+          : {},
+        email: email,
+        event: data.event
+      }),
+      trackLink: () => ({
+        properties: data.properties
+          ? makeTableMap(data.properties, 'name', 'value')
+          : {},
+        email: email,
+        link: data.link
+      }),
+      identify: () => ({
+        attributes: data.customerProperties
+          ? makeTableMap(data.customerProperties, 'name', 'value')
+          : {},
+        email: email
+      })
+    },
+    v3: {
+      trackPage: () => ({
+        event_name: 'page_view',
+        identifiers: mergeObj(
+          { email_id: email },
+          data.customerIdentifiers
+            ? makeTableMap(data.customerIdentifiers, 'name', 'value')
+            : {}
+        ),
+        event_properties: data.properties
+          ? makeTableMap(data.properties, 'name', 'value')
+          : {},
+        page: data.page
+      }),
+      trackEvent: () => ({
+        event_name: data.event,
+        identifiers: mergeObj(
+          { email_id: email },
+          data.customerIdentifiers
+            ? makeTableMap(data.customerIdentifiers, 'name', 'value')
+            : {}
+        ),
+        contact_properties: data.properties
+          ? makeTableMap(data.properties, 'name', 'value')
+          : {},
+        event_properties: data.propertiesEvent
+          ? makeTableMap(data.propertiesEvent, 'name', 'value')
+          : {}
+      }),
+      trackLink: () => ({
+        event_name: 'link',
+        identifiers: mergeObj(
+          { email_id: email },
+          data.customerIdentifiers
+            ? makeTableMap(data.customerIdentifiers, 'name', 'value')
+            : {}
+        ),
+        event_properties: data.properties
+          ? makeTableMap(data.properties, 'name', 'value')
+          : {},
+        link: data.link
+      }),
+      identify: () => ({
+        event_name: 'identify',
+        identifiers: mergeObj(
+          { email_id: email },
+          data.customerIdentifiers
+            ? makeTableMap(data.customerIdentifiers, 'name', 'value')
+            : {}
+        ),
+        contact_properties: data.customerProperties
+          ? makeTableMap(data.customerProperties, 'name', 'value')
+          : {}
+      })
+    }
+  };
+
+  return eventPayloadByApiVersion[API_VERSION][event]();
+}
+
+function areThereRequiredFieldsMissing(brevoEventData) {
+  const requiredFieldsValidationByApiVersion = {
+    v2: () => {
+      if (!isValidValue(brevoEventData.email)) return true;
+      return false;
+    },
+    v3: () => {
+      if (
+        ['email_id', 'phone_id', 'ext_id'].every(
+          (p) => !isValidValue(brevoEventData.identifiers[p])
+        )
+      ) {
+        return true;
+      }
+      return false;
+    }
+  };
+  return requiredFieldsValidationByApiVersion[API_VERSION]();
+}
+
+function getRequestUrl() {
+  const baseUrlByApiVersion = {
+    v2: 'https://in-automate.brevo.com/api/v2/' + data.type,
+    v3: 'https://api.brevo.com/v3/events'
+  };
+  return baseUrlByApiVersion[API_VERSION];
+}
+
+function getRequestHeaders() {
+  const baseHeaders = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json'
+  };
+  const headersByApiVersion = {
+    v2: { 'ma-key': data.clientKey },
+    v3: { 'api-key': data.clientKey }
+  };
+  return mergeObj(baseHeaders, headersByApiVersion[API_VERSION]);
+}
+
 function storeCookie(name, value) {
   setCookie('brevo_' + name, value, {
     domain: 'auto',
@@ -394,8 +645,27 @@ function storeCookie(name, value) {
     samesite: 'Lax',
     secure: true,
     'max-age': 63072000, // 2 years
-    httpOnly: false,
+    httpOnly: false
   });
+}
+
+function isValidValue(value) {
+  const valueType = getType(value);
+  return valueType !== 'null' && valueType !== 'undefined' && value !== '';
+}
+
+function mergeObj(target, source) {
+  for (const key in source) {
+    if (source.hasOwnProperty(key)) target[key] = source[key];
+  }
+  return target;
+}
+
+function isConsentGivenOrNotRequired() {
+  if (data.adStorageConsent !== 'required') return true;
+  if (eventData.consent_state) return !!eventData.consent_state.ad_storage;
+  const xGaGcs = eventData['x-ga-gcs'] || ''; // x-ga-gcs is a string like "G110"
+  return xGaGcs[2] === '1';
 }
 
 function determinateIsLoggingEnabled() {
@@ -446,6 +716,10 @@ ___SERVER_PERMISSIONS___
               {
                 "type": 1,
                 "string": "https://in-automate.brevo.com/*"
+              },
+              {
+                "type": 1,
+                "string": "https://api.brevo.com/*"
               }
             ]
           }
@@ -512,6 +786,21 @@ ___SERVER_PERMISSIONS___
                   {
                     "type": 1,
                     "string": "trace-id"
+                  }
+                ]
+              },
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "headerName"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "referer"
                   }
                 ]
               }
@@ -654,13 +943,349 @@ ___SERVER_PERMISSIONS___
       "isEditedByUser": true
     },
     "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "read_event_data",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "eventDataAccess",
+          "value": {
+            "type": 1,
+            "string": "any"
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
   }
 ]
 
 
 ___TESTS___
 
-scenarios: []
+scenarios:
+- name: V2 - Track page view
+  code: |-
+    const expectedValue = 'test';
+    const inputTableMapForProperties = [{ name: expectedValue, value: expectedValue }];
+    const expectedObjectForProperties = makeTableMap(inputTableMapForProperties, 'name', 'value');
+
+    mockData.apiVersion = 'v2';
+    mockData.type = 'trackPage';
+    mockData.page = expectedValue;
+    mockData.email = expectedValue;
+    mockData.properties = inputTableMapForProperties;
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://in-automate.brevo.com/api/v2/' + mockData.type);
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['ma-key']).isEqualTo(mockData.clientKey);
+      assertThat(bodyParsed.properties).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.email).isEqualTo(expectedValue);
+      assertThat(bodyParsed.page).isEqualTo(expectedValue);
+    });
+
+    runCode(mockData);
+- name: V2 - Track event
+  code: |-
+    const expectedValue = 'test';
+    const inputTableMapForProperties = [{ name: expectedValue, value: expectedValue }];
+    const expectedObjectForProperties = makeTableMap(inputTableMapForProperties, 'name', 'value');
+
+    mockData.apiVersion = 'v2';
+    mockData.type = 'trackEvent';
+    mockData.event = expectedValue;
+    mockData.email = expectedValue;
+    mockData.propertiesEvent = inputTableMapForProperties;
+    mockData.properties = inputTableMapForProperties;
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://in-automate.brevo.com/api/v2/' + mockData.type);
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['ma-key']).isEqualTo(mockData.clientKey);
+      assertThat(bodyParsed.properties).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.eventData).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.email).isEqualTo(expectedValue);
+      assertThat(bodyParsed.event).isEqualTo(expectedValue);
+    });
+
+    runCode(mockData);
+- name: V2 - Track link click
+  code: |-
+    const expectedValue = 'test';
+    const inputTableMapForProperties = [{ name: expectedValue, value: expectedValue }];
+    const expectedObjectForProperties = makeTableMap(inputTableMapForProperties, 'name', 'value');
+
+    mockData.apiVersion = 'v2';
+    mockData.type = 'identify';
+    mockData.email = expectedValue;
+    mockData.customerProperties = inputTableMapForProperties;
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://in-automate.brevo.com/api/v2/' + mockData.type);
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['ma-key']).isEqualTo(mockData.clientKey);
+      assertThat(bodyParsed.attributes).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.email).isEqualTo(expectedValue);
+    });
+
+    runCode(mockData);
+- name: V2 - Identify user
+  code: |-
+    const expectedValue = 'test';
+    const inputTableMapForProperties = [{ name: expectedValue, value: expectedValue }];
+    const expectedObjectForProperties = makeTableMap(inputTableMapForProperties, 'name', 'value');
+
+    mockData.apiVersion = 'v2';
+    mockData.type = 'trackLink';
+    mockData.link = expectedValue;
+    mockData.email = expectedValue;
+    mockData.properties = inputTableMapForProperties;
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://in-automate.brevo.com/api/v2/' + mockData.type);
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['ma-key']).isEqualTo(mockData.clientKey);
+      assertThat(bodyParsed.properties).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.email).isEqualTo(expectedValue);
+      assertThat(bodyParsed.link).isEqualTo(expectedValue);
+    });
+
+    runCode(mockData);
+- name: V2 - Save user email in cookie if checkbox is enabled
+  code: |-
+    const expectedValue = 'test';
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackPage';
+    mockData.page = expectedValue;
+    mockData.storeEmail = true;
+    mockData.email = expectedValue;
+
+    runCode(mockData);
+
+    assertApi('setCookie').wasCalledWith('brevo_email', expectedValue, {
+      domain: 'auto',
+      path: '/',
+      samesite: 'Lax',
+      secure: true,
+      'max-age': 63072000,
+      httpOnly: false,
+    });
+- name: V2 - Use user email from cookie if checkbox is enabled
+  code: |-
+    const expectedValue = 'test';
+
+    mockData.apiVersion = 'v2';
+    mockData.type = 'trackPage';
+    mockData.page = expectedValue;
+    mockData.storeEmail = true;
+    mockData.email = undefined;
+
+    mock('getCookieValues', [expectedValue]);
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(bodyParsed.email).isEqualTo(expectedValue);
+    });
+
+    runCode(mockData);
+- name: V2 - Request is not sent when there are missing required user indentifiers
+  code: |-
+    const expectedValue = 'test';
+
+    mockData.apiVersion = 'v2';
+    mockData.type = 'trackPage';
+    mockData.page = expectedValue;
+    mockData.email = undefined;
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+- name: V3 - Track page view
+  code: |-
+    const expectedValue = 'test';
+    const inputTableMapForProperties = [{ name: expectedValue, value: expectedValue }];
+    const expectedObjectForProperties = makeTableMap(inputTableMapForProperties, 'name', 'value');
+    const inputTableMapForIdentifiers = [{ name: 'ext_id', value: expectedValue }, { name: 'phone_id', value: expectedValue }];
+    const expectedObjectForIdentifiers = makeTableMap(inputTableMapForIdentifiers, 'name', 'value');
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackPage';
+    mockData.page = expectedValue;
+    mockData.email = expectedValue;
+    mockData.properties = inputTableMapForProperties;
+    mockData.customerIdentifiers = inputTableMapForIdentifiers;
+
+    expectedObjectForIdentifiers.email_id = mockData.email;
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://api.brevo.com/v3/events');
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['api-key']).isEqualTo(mockData.clientKey);
+      assertThat(bodyParsed.event_name).isEqualTo('page_view');
+      assertThat(bodyParsed.page).isEqualTo(expectedValue);
+      assertThat(bodyParsed.event_properties).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.identifiers).isEqualTo(expectedObjectForIdentifiers);
+    });
+
+    runCode(mockData);
+- name: V3 - Track event
+  code: |-
+    const expectedValue = 'test';
+    const inputTableMapForProperties = [{ name: expectedValue, value: expectedValue }];
+    const expectedObjectForProperties = makeTableMap(inputTableMapForProperties, 'name', 'value');
+    const inputTableMapForIdentifiers = [{ name: 'ext_id', value: expectedValue }, { name: 'phone_id', value: expectedValue }];
+    const expectedObjectForIdentifiers = makeTableMap(inputTableMapForIdentifiers, 'name', 'value');
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackEvent';
+    mockData.event = expectedValue;
+    mockData.email = expectedValue;
+    mockData.propertiesEvent = inputTableMapForProperties;
+    mockData.properties = inputTableMapForProperties;
+    mockData.customerIdentifiers = inputTableMapForIdentifiers;
+
+    expectedObjectForIdentifiers.email_id = mockData.email;
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://api.brevo.com/v3/events');
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['api-key']).isEqualTo(mockData.clientKey);
+      assertThat(bodyParsed.event_name).isEqualTo(expectedValue);
+      assertThat(bodyParsed.event_properties).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.contact_properties).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.identifiers).isEqualTo(expectedObjectForIdentifiers);
+    });
+
+    runCode(mockData);
+- name: V3 - Track link click
+  code: |-
+    const expectedValue = 'test';
+    const inputTableMapForProperties = [{ name: expectedValue, value: expectedValue }];
+    const expectedObjectForProperties = makeTableMap(inputTableMapForProperties, 'name', 'value');
+    const inputTableMapForIdentifiers = [{ name: 'ext_id', value: expectedValue }, { name: 'phone_id', value: expectedValue }];
+    const expectedObjectForIdentifiers = makeTableMap(inputTableMapForIdentifiers, 'name', 'value');
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackLink';
+    mockData.email = expectedValue;
+    mockData.link = expectedValue;
+    mockData.properties = inputTableMapForProperties;
+    mockData.customerIdentifiers = inputTableMapForIdentifiers;
+
+    expectedObjectForIdentifiers.email_id = mockData.email;
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://api.brevo.com/v3/events');
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['api-key']).isEqualTo(mockData.clientKey);
+      assertThat(bodyParsed.event_name).isEqualTo('link');
+      assertThat(bodyParsed.link).isEqualTo(expectedValue);
+      assertThat(bodyParsed.event_properties).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.identifiers).isEqualTo(expectedObjectForIdentifiers);
+    });
+
+    runCode(mockData);
+- name: V3 - Identify user
+  code: |-
+    const expectedValue = 'test';
+    const inputTableMapForProperties = [{ name: expectedValue, value: expectedValue }];
+    const expectedObjectForProperties = makeTableMap(inputTableMapForProperties, 'name', 'value');
+    const inputTableMapForIdentifiers = [{ name: 'ext_id', value: expectedValue }, { name: 'phone_id', value: expectedValue }];
+    const expectedObjectForIdentifiers = makeTableMap(inputTableMapForIdentifiers, 'name', 'value');
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'identify';
+    mockData.email = expectedValue;
+    mockData.customerProperties = inputTableMapForProperties;
+    mockData.customerIdentifiers = inputTableMapForIdentifiers;
+
+    expectedObjectForIdentifiers.email_id = mockData.email;
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://api.brevo.com/v3/events');
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['api-key']).isEqualTo(mockData.clientKey);
+      assertThat(bodyParsed.event_name).isEqualTo('identify');
+      assertThat(bodyParsed.contact_properties).isEqualTo(expectedObjectForProperties);
+      assertThat(bodyParsed.identifiers).isEqualTo(expectedObjectForIdentifiers);
+    });
+
+    runCode(mockData);
+- name: V3 - Save user email in cookie if checkbox is enabled
+  code: |-
+    const expectedValue = 'test';
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackPage';
+    mockData.page = expectedValue;
+    mockData.storeEmail = true;
+    mockData.email = expectedValue;
+
+    runCode(mockData);
+
+    assertApi('setCookie').wasCalledWith('brevo_email', expectedValue, {
+      domain: 'auto',
+      path: '/',
+      samesite: 'Lax',
+      secure: true,
+      'max-age': 63072000,
+      httpOnly: false,
+    });
+- name: V3 - Use user email from cookie if checkbox is enabled
+  code: |-
+    const expectedValue = 'test';
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackPage';
+    mockData.page = expectedValue;
+    mockData.storeEmail = true;
+    mockData.email = undefined;
+
+    mock('getCookieValues', [expectedValue]);
+
+    mock('sendHttpRequest', function(url, callback, options, body) {
+      const bodyParsed = JSON.parse(body);
+      assertThat(bodyParsed.identifiers.email_id).isEqualTo(expectedValue);
+    });
+
+    runCode(mockData);
+- name: V3 - Request is not sent when there are missing required user indentifiers
+  code: |-
+    const expectedValue = 'test';
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackPage';
+    mockData.page = expectedValue;
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+setup: |-
+  const mockData = {
+    clientKey: '123'
+  };
+
+  const JSON = require('JSON');
+  const makeTableMap = require('makeTableMap');
 
 
 ___NOTES___
