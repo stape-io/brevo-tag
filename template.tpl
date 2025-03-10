@@ -474,18 +474,20 @@ function sendEvent(eventName, brevoEventData) {
   sendHttpRequest(
     url,
     (statusCode, headers, body) => {
-      logToConsole(
-        JSON.stringify({
-          Name: 'Brevo',
-          Type: 'Response',
-          TraceId: traceId,
-          EventName: eventName,
-          ResponseStatusCode: statusCode,
-          ResponseHeaders: headers,
-          ResponseBody: body
-        })
-      );
-
+      if (isLoggingEnabled) {
+        logToConsole(
+          JSON.stringify({
+            Name: 'Brevo',
+            Type: 'Response',
+            TraceId: traceId,
+            EventName: eventName,
+            ResponseStatusCode: statusCode,
+            ResponseHeaders: headers,
+            ResponseBody: body
+          })
+        );
+      }
+      
       if (!data.useOptimisticScenario) {
         if (statusCode >= 200 && statusCode < 300) {
           data.gtmOnSuccess();
