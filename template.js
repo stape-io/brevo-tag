@@ -53,15 +53,17 @@ switch (data.type) {
 function sendEvent(eventName, brevoEventData) {
   if (areThereRequiredFieldsMissing(brevoEventData)) {
     if (isLoggingEnabled) {
-      logToConsole({
-        Name: 'Brevo',
-        Type: 'Message',
-        TraceId: traceId,
-        EventName: eventName,
-        Message: 'Request was not sent. API ' + API_VERSION,
-        Reason:
-          'One or more fields are missing: v2: Email; v3: Email, Phone Number or External ID.'
-      });
+      logToConsole(
+        JSON.stringify({
+          Name: 'Brevo',
+          Type: 'Message',
+          TraceId: traceId,
+          EventName: eventName,
+          Message: 'Request was not sent. API ' + API_VERSION,
+          Reason:
+            'One or more fields are missing: v2: Email; v3: Email, Phone Number or External ID.'
+        })
+      );
     }
     return data.gtmOnFailure();
   }
@@ -85,18 +87,20 @@ function sendEvent(eventName, brevoEventData) {
   sendHttpRequest(
     url,
     (statusCode, headers, body) => {
-      logToConsole(
-        JSON.stringify({
-          Name: 'Brevo',
-          Type: 'Response',
-          TraceId: traceId,
-          EventName: eventName,
-          ResponseStatusCode: statusCode,
-          ResponseHeaders: headers,
-          ResponseBody: body
-        })
-      );
-
+      if (isLoggingEnabled) {
+        logToConsole(
+          JSON.stringify({
+            Name: 'Brevo',
+            Type: 'Response',
+            TraceId: traceId,
+            EventName: eventName,
+            ResponseStatusCode: statusCode,
+            ResponseHeaders: headers,
+            ResponseBody: body
+          })
+        );
+      }
+      
       if (!data.useOptimisticScenario) {
         if (statusCode >= 200 && statusCode < 300) {
           data.gtmOnSuccess();
