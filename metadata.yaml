@@ -1,4 +1,5 @@
 homepage: 'https://stape.io/'
+documentation: 'https://github.com/stape-io/brevo-tag'
 versions:
   - sha: dd029afaac28d42fced6c2e7e398c27d9bd921ab
     changeNotes: Fixed logging conditions.
