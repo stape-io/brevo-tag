@@ -1,6 +1,8 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/brevo-tag'
 versions:
+  - sha: 5f7f229bf9a4dabed32af6e71be04eb8f928224d1
+    changeNotes: Updated consent section.
   - sha: dd029afaac28d42fced6c2e7e398c27d9bd921ab
     changeNotes: Fixed logging conditions.
   - sha: d42dcd4d6365f70e985940a0c92ea4b2766cce10
