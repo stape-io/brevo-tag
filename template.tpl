@@ -329,14 +329,13 @@ ___TEMPLATE_PARAMETERS___
   },
   {
     "type": "GROUP",
-    "name": "consentSettingsGroup",
-    "displayName": "Consent Settings",
+    "name": "tagExecutionConsentSettingsGroup",
+    "displayName": "Tag Execution Consent Settings",
     "groupStyle": "ZIPPY_CLOSED",
     "subParams": [
       {
         "type": "RADIO",
         "name": "adStorageConsent",
-        "displayName": "",
         "radioItems": [
           {
             "value": "optional",
@@ -344,7 +343,8 @@ ___TEMPLATE_PARAMETERS___
           },
           {
             "value": "required",
-            "displayValue": "Send data in case marketing consent given"
+            "displayValue": "Send data in case marketing consent given",
+            "help": "Aborts the tag execution if marketing consent (\u003ci\u003ead_storage\u003c/i\u003e Google Consent Mode or Stape\u0027s Data Tag parameter) is not given."
           }
         ],
         "simpleValueType": true,
@@ -385,16 +385,19 @@ ___TEMPLATE_PARAMETERS___
 
 ___SANDBOXED_JS_FOR_SERVER___
 
-const sendHttpRequest = require('sendHttpRequest');
 const getAllEventData = require('getAllEventData');
-const JSON = require('JSON');
 const getCookieValues = require('getCookieValues');
-const setCookie = require('setCookie');
-const getContainerVersion = require('getContainerVersion');
-const logToConsole = require('logToConsole');
 const getRequestHeader = require('getRequestHeader');
-const makeTableMap = require('makeTableMap');
 const getType = require('getType');
+const getContainerVersion = require('getContainerVersion');
+const JSON = require('JSON');
+const logToConsole = require('logToConsole');
+const makeTableMap = require('makeTableMap');
+const sendHttpRequest = require('sendHttpRequest');
+const setCookie = require('setCookie');
+
+/*==============================================================================
+==============================================================================*/
 
 const isLoggingEnabled = determinateIsLoggingEnabled();
 const traceId = isLoggingEnabled ? getRequestHeader('trace-id') : undefined;
@@ -487,7 +490,7 @@ function sendEvent(eventName, brevoEventData) {
           })
         );
       }
-      
+
       if (!data.useOptimisticScenario) {
         if (statusCode >= 200 && statusCode < 300) {
           data.gtmOnSuccess();
@@ -508,30 +511,26 @@ function sendEvent(eventName, brevoEventData) {
   }
 }
 
+/*==============================================================================
+Vendor related functions
+==============================================================================*/
+
 function formatEventPayloadByApiVersion(event) {
   const eventPayloadByApiVersion = {
     v2: {
       trackPage: () => ({
-        properties: data.properties
-          ? makeTableMap(data.properties, 'name', 'value')
-          : {},
+        properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
         email: email,
         page: data.page
       }),
       trackEvent: () => ({
-        properties: data.properties
-          ? makeTableMap(data.properties, 'name', 'value')
-          : {},
-        eventData: data.propertiesEvent
-          ? makeTableMap(data.propertiesEvent, 'name', 'value')
-          : {},
+        properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
+        eventData: data.propertiesEvent ? makeTableMap(data.propertiesEvent, 'name', 'value') : {},
         email: email,
         event: data.event
       }),
       trackLink: () => ({
-        properties: data.properties
-          ? makeTableMap(data.properties, 'name', 'value')
-          : {},
+        properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
         email: email,
         link: data.link
       }),
@@ -547,26 +546,18 @@ function formatEventPayloadByApiVersion(event) {
         event_name: 'page_view',
         identifiers: mergeObj(
           { email_id: email },
-          data.customerIdentifiers
-            ? makeTableMap(data.customerIdentifiers, 'name', 'value')
-            : {}
+          data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
         ),
-        event_properties: data.properties
-          ? makeTableMap(data.properties, 'name', 'value')
-          : {},
+        event_properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
         page: data.page
       }),
       trackEvent: () => ({
         event_name: data.event,
         identifiers: mergeObj(
           { email_id: email },
-          data.customerIdentifiers
-            ? makeTableMap(data.customerIdentifiers, 'name', 'value')
-            : {}
+          data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
         ),
-        contact_properties: data.properties
-          ? makeTableMap(data.properties, 'name', 'value')
-          : {},
+        contact_properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
         event_properties: data.propertiesEvent
           ? makeTableMap(data.propertiesEvent, 'name', 'value')
           : {}
@@ -575,22 +566,16 @@ function formatEventPayloadByApiVersion(event) {
         event_name: 'link',
         identifiers: mergeObj(
           { email_id: email },
-          data.customerIdentifiers
-            ? makeTableMap(data.customerIdentifiers, 'name', 'value')
-            : {}
+          data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
         ),
-        event_properties: data.properties
-          ? makeTableMap(data.properties, 'name', 'value')
-          : {},
+        event_properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
         link: data.link
       }),
       identify: () => ({
         event_name: 'identify',
         identifiers: mergeObj(
           { email_id: email },
-          data.customerIdentifiers
-            ? makeTableMap(data.customerIdentifiers, 'name', 'value')
-            : {}
+          data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
         ),
         contact_properties: data.customerProperties
           ? makeTableMap(data.customerProperties, 'name', 'value')
@@ -652,6 +637,10 @@ function storeCookie(name, value) {
     httpOnly: false
   });
 }
+
+/*==============================================================================
+Helpers
+==============================================================================*/
 
 function isValidValue(value) {
   const valueType = getType(value);
