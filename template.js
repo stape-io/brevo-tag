@@ -12,20 +12,9 @@ const setCookie = require('setCookie');
 /*==============================================================================
 ==============================================================================*/
 
-const isLoggingEnabled = determinateIsLoggingEnabled();
-const traceId = isLoggingEnabled ? getRequestHeader('trace-id') : undefined;
-
 const eventData = getAllEventData();
 
-if (!isConsentGivenOrNotRequired()) {
-  return data.gtmOnSuccess();
-}
-
-const url = eventData.page_location || getRequestHeader('referer');
-
-if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) {
-  return data.gtmOnSuccess();
-}
+if (shouldExitEarly(data, eventData)) return;
 
 // Fallback to V2, which is the one being used in the Gallery when this change was made.
 const API_VERSION = data.apiVersion || 'v2';
@@ -50,66 +39,51 @@ switch (data.type) {
     sendEvent('identify', formatEventPayloadByApiVersion('identify'));
     break;
   default:
-    data.gtmOnSuccess();
+    return data.gtmOnFailure();
 }
+
+/*==============================================================================
+  Vendor related functions
+==============================================================================*/
 
 function sendEvent(eventName, brevoEventData) {
   if (areThereRequiredFieldsMissing(brevoEventData)) {
-    if (isLoggingEnabled) {
-      logToConsole(
-        JSON.stringify({
-          Name: 'Brevo',
-          Type: 'Message',
-          TraceId: traceId,
-          EventName: eventName,
-          Message: 'Request was not sent. API ' + API_VERSION,
-          Reason:
-            'One or more fields are missing: v2: Email; v3: Email, Phone Number or External ID.'
-        })
-      );
-    }
+    log({
+      Name: 'Brevo',
+      Type: 'Message',
+      EventName: eventName,
+      Message: '🛑 [ERROR] Request was not sent. API ' + API_VERSION,
+      Reason: 'One or more fields are missing: v2: Email; v3: Email, Phone Number or External ID.'
+    });
     return data.gtmOnFailure();
   }
 
   const url = getRequestUrl();
 
-  if (isLoggingEnabled) {
-    logToConsole(
-      JSON.stringify({
-        Name: 'Brevo',
-        Type: 'Request',
-        TraceId: traceId,
-        EventName: eventName,
-        RequestMethod: 'POST',
-        RequestUrl: url,
-        RequestBody: brevoEventData
-      })
-    );
-  }
+  log({
+    Name: 'Brevo',
+    Type: 'Request',
+    EventName: eventName,
+    RequestMethod: 'POST',
+    RequestUrl: url,
+    RequestBody: brevoEventData
+  });
 
   sendHttpRequest(
     url,
     (statusCode, headers, body) => {
-      if (isLoggingEnabled) {
-        logToConsole(
-          JSON.stringify({
-            Name: 'Brevo',
-            Type: 'Response',
-            TraceId: traceId,
-            EventName: eventName,
-            ResponseStatusCode: statusCode,
-            ResponseHeaders: headers,
-            ResponseBody: body
-          })
-        );
-      }
+      log({
+        Name: 'Brevo',
+        Type: 'Response',
+        EventName: eventName,
+        ResponseStatusCode: statusCode,
+        ResponseHeaders: headers,
+        ResponseBody: body
+      });
 
       if (!data.useOptimisticScenario) {
-        if (statusCode >= 200 && statusCode < 300) {
-          data.gtmOnSuccess();
-        } else {
-          data.gtmOnFailure();
-        }
+        if (statusCode >= 200 && statusCode < 300) return data.gtmOnSuccess();
+        return data.gtmOnFailure();
       }
     },
     {
@@ -119,14 +93,8 @@ function sendEvent(eventName, brevoEventData) {
     JSON.stringify(brevoEventData)
   );
 
-  if (data.useOptimisticScenario) {
-    data.gtmOnSuccess();
-  }
+  if (data.useOptimisticScenario) return data.gtmOnSuccess();
 }
-
-/*==============================================================================
-Vendor related functions
-==============================================================================*/
 
 function formatEventPayloadByApiVersion(event) {
   const eventPayloadByApiVersion = {
@@ -207,13 +175,10 @@ function areThereRequiredFieldsMissing(brevoEventData) {
       return false;
     },
     v3: () => {
-      if (
-        ['email_id', 'phone_id', 'ext_id'].every(
-          (p) => !isValidValue(brevoEventData.identifiers[p])
-        )
-      ) {
-        return true;
-      }
+      const doesNotHaveValidIdentifier = ['email_id', 'phone_id', 'ext_id'].every(
+        (p) => !isValidValue(brevoEventData.identifiers[p])
+      );
+      if (doesNotHaveValidIdentifier) return true;
       return false;
     }
   };
@@ -252,12 +217,29 @@ function storeCookie(name, value) {
 }
 
 /*==============================================================================
-Helpers
+  Helpers
 ==============================================================================*/
+
+function getUrl(eventData) {
+  return eventData.page_location || getRequestHeader('referer') || eventData.page_referrer;
+}
+
+function shouldExitEarly(data, eventData) {
+  if (!isConsentGivenOrNotRequired(data, eventData)) {
+    data.gtmOnSuccess();
+    return true;
+  }
+
+  const url = getUrl(eventData);
+  if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) {
+    data.gtmOnSuccess();
+    return true;
+  }
+}
 
 function isValidValue(value) {
   const valueType = getType(value);
-  return valueType !== 'null' && valueType !== 'undefined' && value !== '';
+  return valueType !== 'null' && valueType !== 'undefined' && value !== '' && value === value;
 }
 
 function mergeObj(target, source) {
@@ -267,11 +249,18 @@ function mergeObj(target, source) {
   return target;
 }
 
-function isConsentGivenOrNotRequired() {
+function isConsentGivenOrNotRequired(data, eventData) {
   if (data.adStorageConsent !== 'required') return true;
   if (eventData.consent_state) return !!eventData.consent_state.ad_storage;
   const xGaGcs = eventData['x-ga-gcs'] || ''; // x-ga-gcs is a string like "G110"
   return xGaGcs[2] === '1';
+}
+
+function log(rawDataToLog) {
+  if (!determinateIsLoggingEnabled()) return;
+
+  rawDataToLog.TraceId = getRequestHeader('trace-id');
+  logToConsole(JSON.stringify(rawDataToLog));
 }
 
 function determinateIsLoggingEnabled() {
