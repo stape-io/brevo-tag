@@ -1,7 +1,7 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/brevo-tag'
 versions:
-  - sha: d887cd9d6e64b8e9c249812e1159c17a34d28256
+  - sha: cd26e3bc26a4e9d5318a9a89b30077cae9e83918
     changeNotes: Marked API v3 as the default option. Marked API v2 as legacy.
   - sha: 5f7f229bf9a4dabed32af6e71be04eb8f928224d1
     changeNotes: Updated consent section.
