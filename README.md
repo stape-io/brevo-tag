@@ -24,3 +24,6 @@ The Brevo tag for the server Google Tag Manager (sGTM) container enables seamles
 ## Open Source
 
 Brevo Tag for GTM Server Side is developed and maintained by [Stape Team](https://stape.io/) under the Apache 2.0 license.
+
+### GTM Gallery Status
+🟢 [Listed](https://tagmanager.google.com/gallery/#/owners/stape-io/templates/brevo-tag)
