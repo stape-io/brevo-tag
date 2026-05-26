@@ -359,34 +359,6 @@ ___TEMPLATE_PARAMETERS___
         "defaultValue": "optional"
       }
     ]
-  },
-  {
-    "displayName": "Logs Settings",
-    "name": "logsGroup",
-    "groupStyle": "ZIPPY_CLOSED",
-    "type": "GROUP",
-    "subParams": [
-      {
-        "type": "RADIO",
-        "name": "logType",
-        "radioItems": [
-          {
-            "value": "no",
-            "displayValue": "Do not log"
-          },
-          {
-            "value": "debug",
-            "displayValue": "Log to console during debug and preview"
-          },
-          {
-            "value": "always",
-            "displayValue": "Always log to console"
-          }
-        ],
-        "simpleValueType": true,
-        "defaultValue": "debug"
-      }
-    ]
   }
 ]
 
@@ -397,7 +369,6 @@ const getAllEventData = require('getAllEventData');
 const getCookieValues = require('getCookieValues');
 const getRequestHeader = require('getRequestHeader');
 const getType = require('getType');
-const getContainerVersion = require('getContainerVersion');
 const JSON = require('JSON');
 const logToConsole = require('logToConsole');
 const makeTableMap = require('makeTableMap');
@@ -454,28 +425,9 @@ function sendEvent(eventName, brevoEventData) {
   }
 
   const url = getRequestUrl();
-
-  log({
-    Name: 'Brevo',
-    Type: 'Request',
-    EventName: eventName,
-    RequestMethod: 'POST',
-    RequestUrl: url,
-    RequestBody: brevoEventData
-  });
-
   sendHttpRequest(
     url,
     (statusCode, headers, body) => {
-      log({
-        Name: 'Brevo',
-        Type: 'Response',
-        EventName: eventName,
-        ResponseStatusCode: statusCode,
-        ResponseHeaders: headers,
-        ResponseBody: body
-      });
-
       if (!data.useOptimisticScenario) {
         if (statusCode >= 200 && statusCode < 300) return data.gtmOnSuccess();
         return data.gtmOnFailure();
@@ -652,32 +604,8 @@ function isConsentGivenOrNotRequired(data, eventData) {
 }
 
 function log(rawDataToLog) {
-  if (!determinateIsLoggingEnabled()) return;
-
   rawDataToLog.TraceId = getRequestHeader('trace-id');
   logToConsole(JSON.stringify(rawDataToLog));
-}
-
-function determinateIsLoggingEnabled() {
-  const containerVersion = getContainerVersion();
-  const isDebug = !!(
-    containerVersion &&
-    (containerVersion.debugMode || containerVersion.previewMode)
-  );
-
-  if (!data.logType) {
-    return isDebug;
-  }
-
-  if (data.logType === 'no') {
-    return false;
-  }
-
-  if (data.logType === 'debug') {
-    return isDebug;
-  }
-
-  return data.logType === 'always';
 }
 
 
@@ -739,16 +667,6 @@ ___SERVER_PERMISSIONS___
     },
     "clientAnnotations": {
       "isEditedByUser": true
-    },
-    "isRequired": true
-  },
-  {
-    "instance": {
-      "key": {
-        "publicId": "read_container_data",
-        "versionId": "1"
-      },
-      "param": []
     },
     "isRequired": true
   },
@@ -1403,6 +1321,10 @@ setup: |-
 
 
 ___NOTES___
+
+2026-05-25 Change Notes:
+ - Logging removal.
+
 
 Created on 28/07/2023, 15:15:15
 
