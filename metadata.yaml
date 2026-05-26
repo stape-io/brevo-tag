@@ -1,6 +1,8 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/brevo-tag'
 versions:
+  - sha: 7868976852217f2eb6c18a4d3271cfdd355ccf24
+    changeNotes: Logging removal.
   - sha: cd26e3bc26a4e9d5318a9a89b30077cae9e83918
     changeNotes: Marked API v3 as the default option. Marked API v2 as legacy.
   - sha: 5f7f229bf9a4dabed32af6e71be04eb8f928224d1
