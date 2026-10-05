@@ -1,10 +1,14 @@
 const getAllEventData = require('getAllEventData');
 const getCookieValues = require('getCookieValues');
 const getRequestHeader = require('getRequestHeader');
+const getTimestampMillis = require('getTimestampMillis');
 const getType = require('getType');
 const JSON = require('JSON');
 const logToConsole = require('logToConsole');
+const makeNumber = require('makeNumber');
+const makeString = require('makeString');
 const makeTableMap = require('makeTableMap');
+const Math = require('Math');
 const sendHttpRequest = require('sendHttpRequest');
 const setCookie = require('setCookie');
 
@@ -16,7 +20,7 @@ const eventData = getAllEventData();
 if (shouldExitEarly(data, eventData)) return;
 
 // Fallback to V2, which is the one being used in the Gallery when this change was made.
-const API_VERSION = data.apiVersion || 'v2';
+const API_VERSION = data.type === 'trackOrder' ? 'v3' : data.apiVersion || 'v2';
 
 let email = data.email;
 if (data.storeEmail) {
@@ -37,6 +41,9 @@ switch (data.type) {
   case 'identify':
     sendEvent('identify', formatEventPayloadByApiVersion('identify'));
     break;
+  case 'trackOrder':
+    sendEvent('trackOrder', formatEventPayloadByApiVersion('trackOrder'));
+    break;
   default:
     return data.gtmOnFailure();
 }
@@ -46,13 +53,14 @@ switch (data.type) {
 ==============================================================================*/
 
 function sendEvent(eventName, brevoEventData) {
-  if (areThereRequiredFieldsMissing(brevoEventData)) {
+  const invalidFields = getInvalidRequiredFields(brevoEventData);
+  if (invalidFields.length > 0) {
     log({
       Name: 'Brevo',
       Type: 'Message',
       EventName: eventName,
       Message: '🛑 [ERROR] Request was not sent. API ' + API_VERSION,
-      Reason: 'One or more fields are missing: v2: Email; v3: Email, Phone Number or External ID.'
+      Reason: 'Missing or invalid field(s): ' + invalidFields.join(', ') + '.'
     });
     return data.gtmOnFailure();
   }
@@ -141,25 +149,73 @@ function formatEventPayloadByApiVersion(event) {
         contact_properties: data.customerProperties
           ? makeTableMap(data.customerProperties, 'name', 'value')
           : {}
-      })
+      }),
+      trackOrder: () => {
+        const orderData = data.orderProperties
+          ? makeTableMap(data.orderProperties, 'name', 'value')
+          : {};
+        const now = convertTimestampToISO(getTimestampMillis());
+        return {
+          id: orderData.id,
+          amount: makeNumber(isValidValue(orderData.amount) ? orderData.amount : eventData.value),
+          status: orderData.status || 'completed',
+          products: getOrderProducts(orderData.products),
+          createdAt: getOrderDate(orderData.createdAt, now),
+          updatedAt: getOrderDate(orderData.updatedAt, now),
+          identifiers: mergeObj(
+            {
+              email_id: email || getUserDataIdentifier(['email_address', 'email']),
+              phone_id: getUserDataIdentifier(['phone_number'])
+            },
+            data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
+          )
+        };
+      }
     }
   };
 
   return eventPayloadByApiVersion[API_VERSION][event]();
 }
 
-function areThereRequiredFieldsMissing(brevoEventData) {
+function getInvalidRequiredFields(brevoEventData) {
   const requiredFieldsValidationByApiVersion = {
     v2: () => {
-      if (!isValidValue(brevoEventData.email)) return true;
-      return false;
+      if (!isValidValue(brevoEventData.email)) return ['email'];
+      return [];
     },
     v3: () => {
+      // Identifiers are optional for orders, but the order fields are required.
+      if (data.type === 'trackOrder') {
+        const invalidFields = ['id', 'amount', 'status'].filter(
+          (param) => !isValidValue(brevoEventData[param])
+        );
+        ['createdAt', 'updatedAt'].forEach((date) => {
+          if (!isValidOrderDate(brevoEventData[date])) {
+            invalidFields.push(date + ' (expected UTC YYYY-MM-DDTHH:mm:ssZ)');
+          }
+        });
+
+        const products = brevoEventData.products;
+        if (getType(products) !== 'array' || products.length === 0) {
+          invalidFields.push('products (empty)');
+        } else {
+          products.forEach((product, index) => {
+            const prefix = 'products[' + index + '].';
+            if (!isValidValue(product.productId)) invalidFields.push(prefix + 'productId');
+            if (!isValidValue(product.price)) invalidFields.push(prefix + 'price');
+            if (!isValidValue(product.quantity) && !isValidValue(product.quantityFloat)) {
+              invalidFields.push(prefix + 'quantity');
+            }
+          });
+        }
+        return invalidFields;
+      }
+
       const doesNotHaveValidIdentifier = ['email_id', 'phone_id', 'ext_id'].every(
         (p) => !isValidValue(brevoEventData.identifiers[p])
       );
-      if (doesNotHaveValidIdentifier) return true;
-      return false;
+      if (doesNotHaveValidIdentifier) return ['identifiers (email_id, phone_id or ext_id)'];
+      return [];
     }
   };
   return requiredFieldsValidationByApiVersion[API_VERSION]();
@@ -170,6 +226,8 @@ function getRequestUrl() {
     v2: 'https://in-automate.brevo.com/api/v2/' + data.type,
     v3: 'https://api.brevo.com/v3/events'
   };
+
+  if (data.type == 'trackOrder') return 'https://api.brevo.com/v3/orders/status';
   return baseUrlByApiVersion[API_VERSION];
 }
 
@@ -183,6 +241,62 @@ function getRequestHeaders() {
     v3: { 'api-key': data.clientKey }
   };
   return mergeObj(baseHeaders, headersByApiVersion[API_VERSION]);
+}
+
+function getOrderDate(value, fallback) {
+  if (!isValidValue(value)) return fallback;
+
+  const isNumericString = getType(value) === 'string' && value.match('^[0-9]+$') !== null;
+  if (getType(value) === 'number' || isNumericString) {
+    const timestamp = makeNumber(value);
+    return convertTimestampToISO(timestamp < 100000000000 ? timestamp * 1000 : timestamp);
+  }
+  return value;
+}
+
+function isValidOrderDate(value) {
+  return (
+    getType(value) === 'string' &&
+    value.match('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$') !== null
+  );
+}
+
+function getOrderProducts(products) {
+  if (getType(products) === 'string') products = isValidJson(products) ? JSON.parse(products) : [];
+  if (getType(products) !== 'array') products = eventData.items || [];
+  if (getType(products) !== 'array') return;
+
+  // Accepts both Brevo (productId, variantId) and GA4 (item_id, item_variant) product formats.
+  return products
+    .filter((item) => getType(item) === 'object')
+    .map((item) => {
+      const productId = isValidValue(item.productId) ? item.productId : item.item_id || item.id;
+      const variantId = isValidValue(item.variantId) ? item.variantId : item.item_variant;
+      // Nested ternaries are evaluated left-to-right in the GTM sandbox, so plain ifs are used.
+      let rawQuantity = 1;
+      if (isValidValue(item.quantity)) rawQuantity = item.quantity;
+      else if (isValidValue(item.quantityFloat)) rawQuantity = item.quantityFloat;
+      const quantity = makeNumber(rawQuantity);
+      const product = {
+        productId: isValidValue(productId) ? makeString(productId) : undefined,
+        price: makeNumber(item.price),
+        variantId: isValidValue(variantId) ? makeString(variantId) : undefined
+      };
+      if (quantity % 1 === 0) product.quantity = quantity;
+      else product.quantityFloat = quantity;
+      return product;
+    });
+}
+
+// Hashed values are ignored, as Brevo needs the raw identifier to match the contact.
+function getUserDataIdentifier(keys) {
+  const userData = eventData.user_data || {};
+  for (let i = 0; i < keys.length; i++) {
+    const value = userData[keys[i]];
+    if (isValidValue(value) && makeString(value).match('^[A-Fa-f0-9]{64}$') === null) {
+      return makeString(value);
+    }
+  }
 }
 
 function storeCookie(name, value) {
@@ -215,6 +329,165 @@ function shouldExitEarly(data, eventData) {
     data.gtmOnSuccess();
     return true;
   }
+}
+
+function convertTimestampToISO(timestamp) {
+  const leapYear = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const nonLeapYear = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const secToMs = (s) => s * 1000;
+  const minToMs = (m) => m * secToMs(60);
+  const hoursToMs = (h) => h * minToMs(60);
+  const daysToMs = (d) => d * hoursToMs(24);
+  const padStart = (value, length) => {
+    let result = makeString(value);
+    while (result.length < length) {
+      result = '0' + result;
+    }
+    return result;
+  };
+
+  const fourYearsInMs = daysToMs(365 * 4 + 1);
+  let year = 1970 + Math.floor(timestamp / fourYearsInMs) * 4;
+  timestamp = timestamp % fourYearsInMs;
+
+  while (true) {
+    let isLeapYear = year % 4 === 0;
+    let nextTimestamp = timestamp - daysToMs(isLeapYear ? 366 : 365);
+    if (nextTimestamp < 0) {
+      break;
+    }
+    timestamp = nextTimestamp;
+    year = year + 1;
+  }
+
+  const daysByMonth = year % 4 === 0 ? leapYear : nonLeapYear;
+
+  let month = 0;
+  for (let i = 0; i < daysByMonth.length; i++) {
+    const msInThisMonth = daysToMs(daysByMonth[i]);
+    if (timestamp >= msInThisMonth) {
+      timestamp = timestamp - msInThisMonth;
+    } else {
+      month = i + 1;
+      break;
+    }
+  }
+
+  const date = Math.floor(timestamp / daysToMs(1)) + 1;
+  timestamp = timestamp - daysToMs(date - 1);
+  const hours = Math.floor(timestamp / hoursToMs(1));
+  timestamp = timestamp - hoursToMs(hours);
+  const minutes = Math.floor(timestamp / minToMs(1));
+  timestamp = timestamp - minToMs(minutes);
+  const sec = Math.floor(timestamp / secToMs(1));
+  timestamp = timestamp - secToMs(sec);
+
+  return (
+    year +
+    '-' +
+    padStart(month, 2) +
+    '-' +
+    padStart(date, 2) +
+    'T' +
+    padStart(hours, 2) +
+    ':' +
+    padStart(minutes, 2) +
+    ':' +
+    padStart(sec, 2) +
+    'Z'
+  );
+}
+
+// JSON.parse throws on invalid JSON in the GTM sandbox and try/catch is not available,
+// so the string is checked with a small JSON grammar parser before being parsed.
+function isValidJson(value) {
+  if (getType(value) !== 'string') return false;
+  let index = 0;
+
+  function skipWhitespace() {
+    while (index < value.length && ' \t\n\r'.indexOf(value.charAt(index)) !== -1) index++;
+  }
+
+  function consume(text) {
+    if (value.substring(index, index + text.length) !== text) return false;
+    index += text.length;
+    return true;
+  }
+
+  function parseString() {
+    if (!consume('"')) return false;
+    while (index < value.length) {
+      const char = value.charAt(index);
+      if (char === '"') {
+        index++;
+        return true;
+      }
+      if (char < ' ') return false; // Unescaped control characters are not allowed.
+      if (char !== '\\') {
+        index++;
+        continue;
+      }
+
+      const escaped = value.charAt(index + 1);
+      if (escaped === 'u') {
+        if (value.substring(index + 2, index + 6).match('^[0-9A-Fa-f]{4}$') === null) return false;
+        index += 6;
+      } else {
+        if (escaped === '' || '"\\/bfnrt'.indexOf(escaped) === -1) return false;
+        index += 2;
+      }
+    }
+    return false;
+  }
+
+  function parseNumber() {
+    const match = value.substring(index).match('^-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?');
+    if (match === null) return false;
+    index += match[0].length;
+    return true;
+  }
+
+  function parseArray() {
+    consume('[');
+    skipWhitespace();
+    if (consume(']')) return true;
+    while (true) {
+      if (!parseValue()) return false;
+      skipWhitespace();
+      if (consume(']')) return true;
+      if (!consume(',')) return false;
+    }
+  }
+
+  function parseObject() {
+    consume('{');
+    skipWhitespace();
+    if (consume('}')) return true;
+    while (true) {
+      skipWhitespace();
+      if (!parseString()) return false;
+      skipWhitespace();
+      if (!consume(':')) return false;
+      if (!parseValue()) return false;
+      skipWhitespace();
+      if (consume('}')) return true;
+      if (!consume(',')) return false;
+    }
+  }
+
+  function parseValue() {
+    skipWhitespace();
+    const char = value.charAt(index);
+    if (char === '{') return parseObject();
+    if (char === '[') return parseArray();
+    if (char === '"') return parseString();
+    if (consume('true') || consume('false') || consume('null')) return true;
+    return parseNumber();
+  }
+
+  if (!parseValue()) return false;
+  skipWhitespace();
+  return index === value.length;
 }
 
 function isValidValue(value) {

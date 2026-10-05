@@ -1,4 +1,4 @@
-___TERMS_OF_SERVICE___
+﻿___TERMS_OF_SERVICE___
 
 By creating or modifying this file you agree to Google Tag Manager's Community
 Template Gallery Developer Terms of Service available at
@@ -55,7 +55,14 @@ ___TEMPLATE_PARAMETERS___
         ],
         "simpleValueType": true,
         "defaultValue": "v3",
-        "help": "Only change the API version if necessary, as it may disrupt your existing implementation. Be sure to test thoroughly before making any modifications."
+        "help": "Only change the API version if necessary, as it may disrupt your existing implementation. Be sure to test thoroughly before making any modifications.",
+        "enablingConditions": [
+          {
+            "paramName": "type",
+            "paramValue": "trackOrder",
+            "type": "NOT_EQUALS"
+          }
+        ]
       },
       {
         "type": "RADIO",
@@ -77,6 +84,10 @@ ___TEMPLATE_PARAMETERS___
           {
             "value": "identify",
             "displayValue": "Identify the user"
+          },
+          {
+            "value": "trackOrder",
+            "displayValue": "Track order (v3 only)"
           }
         ],
         "simpleValueType": true,
@@ -263,41 +274,11 @@ ___TEMPLATE_PARAMETERS___
         "paramName": "apiVersion",
         "paramValue": "v3",
         "type": "EQUALS"
-      }
-    ]
-  },
-  {
-    "type": "GROUP",
-    "name": "propertiesGroup",
-    "displayName": "Properties",
-    "groupStyle": "ZIPPY_CLOSED",
-    "subParams": [
-      {
-        "type": "SIMPLE_TABLE",
-        "name": "properties",
-        "displayName": "",
-        "simpleTableColumns": [
-          {
-            "defaultValue": "",
-            "displayName": "Name",
-            "name": "name",
-            "type": "TEXT",
-            "isUnique": true
-          },
-          {
-            "defaultValue": "",
-            "displayName": "Value",
-            "name": "value",
-            "type": "TEXT"
-          }
-        ]
-      }
-    ],
-    "enablingConditions": [
+      },
       {
         "paramName": "type",
-        "paramValue": "identify",
-        "type": "NOT_EQUALS"
+        "paramValue": "trackOrder",
+        "type": "EQUALS"
       }
     ]
   },
@@ -337,6 +318,123 @@ ___TEMPLATE_PARAMETERS___
   },
   {
     "type": "GROUP",
+    "name": "orderDataGroup",
+    "displayName": "Order Data",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "orderProperties",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "",
+            "displayName": "Name",
+            "name": "name",
+            "type": "SELECT",
+            "isUnique": true,
+            "selectItems": [
+              {
+                "value": "id",
+                "displayValue": "ID"
+              },
+              {
+                "value": "amount",
+                "displayValue": "Amount"
+              },
+              {
+                "value": "status",
+                "displayValue": "Status"
+              },
+              {
+                "value": "products",
+                "displayValue": "Products"
+              },
+              {
+                "value": "createdAt",
+                "displayValue": "Created At (UTC)"
+              },
+              {
+                "value": "updatedAt",
+                "displayValue": "Updated At (UTC)"
+              }
+            ],
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          },
+          {
+            "defaultValue": "",
+            "displayName": "Value",
+            "name": "value",
+            "type": "TEXT",
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          }
+        ],
+        "help": "Required values for creating an order or updating an order status: \u003cbr\u003e \u003cul\u003e   \u003cli\u003e\u003cb\u003eID\u003c/b\u003e: The order unique identifier. Must always be set.\u003c/li\u003e   \u003cli\u003e\u003cb\u003eAmount\u003c/b\u003e: The total amount of the order, including shipping and tax. Default: \u003ci\u003evalue\u003c/i\u003e.\u003c/li\u003e   \u003cli\u003e\u003cb\u003eStatus\u003c/b\u003e: Status of the order. Default: \u003ci\u003ecompleted\u003c/i\u003e.\u003c/li\u003e   \u003cli\u003e\u003cb\u003eProducts\u003c/b\u003e: Array of products in \u003ca href\u003d\"https://developers.brevo.com/reference/create-order\"\u003eBrevo format\u003c/a\u003e or GA4 \u003ci\u003eitems\u003c/i\u003e format. Default: \u003ci\u003eitems\u003c/i\u003e.\u003c/li\u003e   \u003cli\u003e\u003cb\u003eCreated At\u003c/b\u003e: UTC date-time (YYYY-MM-DDTHH:mm:ssZ) of when the order was created. Unix timestamps in seconds or milliseconds are converted automatically. Default: current time. \u003cbr\u003e\u003cb\u003eWhen updating the status of an existing order, set this to the original creation date\u003c/b\u003e, so it is not replaced with the current time.\u003c/li\u003e   \u003cli\u003e\u003cb\u003eUpdated At\u003c/b\u003e: UTC date-time (YYYY-MM-DDTHH:mm:ssZ) of when the order status was updated. Unix timestamps in seconds or milliseconds are converted automatically. Default: current time.\u003c/li\u003e \u003c/ul\u003e Except for the Order ID, you can leave fields unset to map them automatically from Event Data.\u003cbr\u003e\u003cbr\u003e Customer identifiers: if the \u003ci\u003eEmail\u003c/i\u003e field is empty, the email (\u003ci\u003euser_data.email_address\u003c/i\u003e or \u003ci\u003euser_data.email\u003c/i\u003e) and phone number (\u003ci\u003euser_data.phone_number\u003c/i\u003e) are read from Event Data. Hashed values are ignored. Values set in \u003ci\u003eCustomer Identifiers\u003c/i\u003e take precedence.",
+        "displayName": "Order Parameters"
+      }
+    ],
+    "enablingConditions": [
+      {
+        "paramName": "type",
+        "paramValue": "trackOrder",
+        "type": "EQUALS"
+      }
+    ]
+  },
+  {
+    "type": "GROUP",
+    "name": "propertiesGroup",
+    "displayName": "Properties",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "properties",
+        "displayName": "",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "",
+            "displayName": "Name",
+            "name": "name",
+            "type": "TEXT",
+            "isUnique": true
+          },
+          {
+            "defaultValue": "",
+            "displayName": "Value",
+            "name": "value",
+            "type": "TEXT"
+          }
+        ]
+      }
+    ],
+    "enablingConditions": [
+      {
+        "paramName": "type",
+        "paramValue": "trackPage",
+        "type": "EQUALS"
+      },
+      {
+        "paramName": "type",
+        "paramValue": "trackEvent",
+        "type": "EQUALS"
+      },
+      {
+        "paramName": "type",
+        "paramValue": "trackLink",
+        "type": "EQUALS"
+      }
+    ]
+  },
+  {
+    "type": "GROUP",
     "name": "tagExecutionConsentSettingsGroup",
     "displayName": "Tag Execution Consent Settings",
     "groupStyle": "ZIPPY_CLOSED",
@@ -368,10 +466,14 @@ ___SANDBOXED_JS_FOR_SERVER___
 const getAllEventData = require('getAllEventData');
 const getCookieValues = require('getCookieValues');
 const getRequestHeader = require('getRequestHeader');
+const getTimestampMillis = require('getTimestampMillis');
 const getType = require('getType');
 const JSON = require('JSON');
 const logToConsole = require('logToConsole');
+const makeNumber = require('makeNumber');
+const makeString = require('makeString');
 const makeTableMap = require('makeTableMap');
+const Math = require('Math');
 const sendHttpRequest = require('sendHttpRequest');
 const setCookie = require('setCookie');
 
@@ -383,7 +485,7 @@ const eventData = getAllEventData();
 if (shouldExitEarly(data, eventData)) return;
 
 // Fallback to V2, which is the one being used in the Gallery when this change was made.
-const API_VERSION = data.apiVersion || 'v2';
+const API_VERSION = data.type === 'trackOrder' ? 'v3' : data.apiVersion || 'v2';
 
 let email = data.email;
 if (data.storeEmail) {
@@ -404,6 +506,9 @@ switch (data.type) {
   case 'identify':
     sendEvent('identify', formatEventPayloadByApiVersion('identify'));
     break;
+  case 'trackOrder':
+    sendEvent('trackOrder', formatEventPayloadByApiVersion('trackOrder'));
+    break;
   default:
     return data.gtmOnFailure();
 }
@@ -413,13 +518,14 @@ switch (data.type) {
 ==============================================================================*/
 
 function sendEvent(eventName, brevoEventData) {
-  if (areThereRequiredFieldsMissing(brevoEventData)) {
+  const invalidFields = getInvalidRequiredFields(brevoEventData);
+  if (invalidFields.length > 0) {
     log({
       Name: 'Brevo',
       Type: 'Message',
       EventName: eventName,
       Message: '🛑 [ERROR] Request was not sent. API ' + API_VERSION,
-      Reason: 'One or more fields are missing: v2: Email; v3: Email, Phone Number or External ID.'
+      Reason: 'Missing or invalid field(s): ' + invalidFields.join(', ') + '.'
     });
     return data.gtmOnFailure();
   }
@@ -508,25 +614,73 @@ function formatEventPayloadByApiVersion(event) {
         contact_properties: data.customerProperties
           ? makeTableMap(data.customerProperties, 'name', 'value')
           : {}
-      })
+      }),
+      trackOrder: () => {
+        const orderData = data.orderProperties
+          ? makeTableMap(data.orderProperties, 'name', 'value')
+          : {};
+        const now = convertTimestampToISO(getTimestampMillis());
+        return {
+          id: orderData.id,
+          amount: makeNumber(isValidValue(orderData.amount) ? orderData.amount : eventData.value),
+          status: orderData.status || 'completed',
+          products: getOrderProducts(orderData.products),
+          createdAt: getOrderDate(orderData.createdAt, now),
+          updatedAt: getOrderDate(orderData.updatedAt, now),
+          identifiers: mergeObj(
+            {
+              email_id: email || getUserDataIdentifier(['email_address', 'email']),
+              phone_id: getUserDataIdentifier(['phone_number'])
+            },
+            data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
+          )
+        };
+      }
     }
   };
 
   return eventPayloadByApiVersion[API_VERSION][event]();
 }
 
-function areThereRequiredFieldsMissing(brevoEventData) {
+function getInvalidRequiredFields(brevoEventData) {
   const requiredFieldsValidationByApiVersion = {
     v2: () => {
-      if (!isValidValue(brevoEventData.email)) return true;
-      return false;
+      if (!isValidValue(brevoEventData.email)) return ['email'];
+      return [];
     },
     v3: () => {
+      // Identifiers are optional for orders, but the order fields are required.
+      if (data.type === 'trackOrder') {
+        const invalidFields = ['id', 'amount', 'status'].filter(
+          (param) => !isValidValue(brevoEventData[param])
+        );
+        ['createdAt', 'updatedAt'].forEach((date) => {
+          if (!isValidOrderDate(brevoEventData[date])) {
+            invalidFields.push(date + ' (expected UTC YYYY-MM-DDTHH:mm:ssZ)');
+          }
+        });
+
+        const products = brevoEventData.products;
+        if (getType(products) !== 'array' || products.length === 0) {
+          invalidFields.push('products (empty)');
+        } else {
+          products.forEach((product, index) => {
+            const prefix = 'products[' + index + '].';
+            if (!isValidValue(product.productId)) invalidFields.push(prefix + 'productId');
+            if (!isValidValue(product.price)) invalidFields.push(prefix + 'price');
+            if (!isValidValue(product.quantity) && !isValidValue(product.quantityFloat)) {
+              invalidFields.push(prefix + 'quantity');
+            }
+          });
+        }
+        return invalidFields;
+      }
+
       const doesNotHaveValidIdentifier = ['email_id', 'phone_id', 'ext_id'].every(
         (p) => !isValidValue(brevoEventData.identifiers[p])
       );
-      if (doesNotHaveValidIdentifier) return true;
-      return false;
+      if (doesNotHaveValidIdentifier) return ['identifiers (email_id, phone_id or ext_id)'];
+      return [];
     }
   };
   return requiredFieldsValidationByApiVersion[API_VERSION]();
@@ -537,6 +691,8 @@ function getRequestUrl() {
     v2: 'https://in-automate.brevo.com/api/v2/' + data.type,
     v3: 'https://api.brevo.com/v3/events'
   };
+
+  if (data.type == 'trackOrder') return 'https://api.brevo.com/v3/orders/status';
   return baseUrlByApiVersion[API_VERSION];
 }
 
@@ -550,6 +706,62 @@ function getRequestHeaders() {
     v3: { 'api-key': data.clientKey }
   };
   return mergeObj(baseHeaders, headersByApiVersion[API_VERSION]);
+}
+
+function getOrderDate(value, fallback) {
+  if (!isValidValue(value)) return fallback;
+
+  const isNumericString = getType(value) === 'string' && value.match('^[0-9]+$') !== null;
+  if (getType(value) === 'number' || isNumericString) {
+    const timestamp = makeNumber(value);
+    return convertTimestampToISO(timestamp < 100000000000 ? timestamp * 1000 : timestamp);
+  }
+  return value;
+}
+
+function isValidOrderDate(value) {
+  return (
+    getType(value) === 'string' &&
+    value.match('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$') !== null
+  );
+}
+
+function getOrderProducts(products) {
+  if (getType(products) === 'string') products = isValidJson(products) ? JSON.parse(products) : [];
+  if (getType(products) !== 'array') products = eventData.items || [];
+  if (getType(products) !== 'array') return;
+
+  // Accepts both Brevo (productId, variantId) and GA4 (item_id, item_variant) product formats.
+  return products
+    .filter((item) => getType(item) === 'object')
+    .map((item) => {
+      const productId = isValidValue(item.productId) ? item.productId : item.item_id || item.id;
+      const variantId = isValidValue(item.variantId) ? item.variantId : item.item_variant;
+      // Nested ternaries are evaluated left-to-right in the GTM sandbox, so plain ifs are used.
+      let rawQuantity = 1;
+      if (isValidValue(item.quantity)) rawQuantity = item.quantity;
+      else if (isValidValue(item.quantityFloat)) rawQuantity = item.quantityFloat;
+      const quantity = makeNumber(rawQuantity);
+      const product = {
+        productId: isValidValue(productId) ? makeString(productId) : undefined,
+        price: makeNumber(item.price),
+        variantId: isValidValue(variantId) ? makeString(variantId) : undefined
+      };
+      if (quantity % 1 === 0) product.quantity = quantity;
+      else product.quantityFloat = quantity;
+      return product;
+    });
+}
+
+// Hashed values are ignored, as Brevo needs the raw identifier to match the contact.
+function getUserDataIdentifier(keys) {
+  const userData = eventData.user_data || {};
+  for (let i = 0; i < keys.length; i++) {
+    const value = userData[keys[i]];
+    if (isValidValue(value) && makeString(value).match('^[A-Fa-f0-9]{64}$') === null) {
+      return makeString(value);
+    }
+  }
 }
 
 function storeCookie(name, value) {
@@ -582,6 +794,165 @@ function shouldExitEarly(data, eventData) {
     data.gtmOnSuccess();
     return true;
   }
+}
+
+function convertTimestampToISO(timestamp) {
+  const leapYear = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const nonLeapYear = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const secToMs = (s) => s * 1000;
+  const minToMs = (m) => m * secToMs(60);
+  const hoursToMs = (h) => h * minToMs(60);
+  const daysToMs = (d) => d * hoursToMs(24);
+  const padStart = (value, length) => {
+    let result = makeString(value);
+    while (result.length < length) {
+      result = '0' + result;
+    }
+    return result;
+  };
+
+  const fourYearsInMs = daysToMs(365 * 4 + 1);
+  let year = 1970 + Math.floor(timestamp / fourYearsInMs) * 4;
+  timestamp = timestamp % fourYearsInMs;
+
+  while (true) {
+    let isLeapYear = year % 4 === 0;
+    let nextTimestamp = timestamp - daysToMs(isLeapYear ? 366 : 365);
+    if (nextTimestamp < 0) {
+      break;
+    }
+    timestamp = nextTimestamp;
+    year = year + 1;
+  }
+
+  const daysByMonth = year % 4 === 0 ? leapYear : nonLeapYear;
+
+  let month = 0;
+  for (let i = 0; i < daysByMonth.length; i++) {
+    const msInThisMonth = daysToMs(daysByMonth[i]);
+    if (timestamp >= msInThisMonth) {
+      timestamp = timestamp - msInThisMonth;
+    } else {
+      month = i + 1;
+      break;
+    }
+  }
+
+  const date = Math.floor(timestamp / daysToMs(1)) + 1;
+  timestamp = timestamp - daysToMs(date - 1);
+  const hours = Math.floor(timestamp / hoursToMs(1));
+  timestamp = timestamp - hoursToMs(hours);
+  const minutes = Math.floor(timestamp / minToMs(1));
+  timestamp = timestamp - minToMs(minutes);
+  const sec = Math.floor(timestamp / secToMs(1));
+  timestamp = timestamp - secToMs(sec);
+
+  return (
+    year +
+    '-' +
+    padStart(month, 2) +
+    '-' +
+    padStart(date, 2) +
+    'T' +
+    padStart(hours, 2) +
+    ':' +
+    padStart(minutes, 2) +
+    ':' +
+    padStart(sec, 2) +
+    'Z'
+  );
+}
+
+// JSON.parse throws on invalid JSON in the GTM sandbox and try/catch is not available,
+// so the string is checked with a small JSON grammar parser before being parsed.
+function isValidJson(value) {
+  if (getType(value) !== 'string') return false;
+  let index = 0;
+
+  function skipWhitespace() {
+    while (index < value.length && ' \t\n\r'.indexOf(value.charAt(index)) !== -1) index++;
+  }
+
+  function consume(text) {
+    if (value.substring(index, index + text.length) !== text) return false;
+    index += text.length;
+    return true;
+  }
+
+  function parseString() {
+    if (!consume('"')) return false;
+    while (index < value.length) {
+      const char = value.charAt(index);
+      if (char === '"') {
+        index++;
+        return true;
+      }
+      if (char < ' ') return false; // Unescaped control characters are not allowed.
+      if (char !== '\\') {
+        index++;
+        continue;
+      }
+
+      const escaped = value.charAt(index + 1);
+      if (escaped === 'u') {
+        if (value.substring(index + 2, index + 6).match('^[0-9A-Fa-f]{4}$') === null) return false;
+        index += 6;
+      } else {
+        if (escaped === '' || '"\\/bfnrt'.indexOf(escaped) === -1) return false;
+        index += 2;
+      }
+    }
+    return false;
+  }
+
+  function parseNumber() {
+    const match = value.substring(index).match('^-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?');
+    if (match === null) return false;
+    index += match[0].length;
+    return true;
+  }
+
+  function parseArray() {
+    consume('[');
+    skipWhitespace();
+    if (consume(']')) return true;
+    while (true) {
+      if (!parseValue()) return false;
+      skipWhitespace();
+      if (consume(']')) return true;
+      if (!consume(',')) return false;
+    }
+  }
+
+  function parseObject() {
+    consume('{');
+    skipWhitespace();
+    if (consume('}')) return true;
+    while (true) {
+      skipWhitespace();
+      if (!parseString()) return false;
+      skipWhitespace();
+      if (!consume(':')) return false;
+      if (!parseValue()) return false;
+      skipWhitespace();
+      if (consume('}')) return true;
+      if (!consume(',')) return false;
+    }
+  }
+
+  function parseValue() {
+    skipWhitespace();
+    const char = value.charAt(index);
+    if (char === '{') return parseObject();
+    if (char === '[') return parseArray();
+    if (char === '"') return parseString();
+    if (consume('true') || consume('false') || consume('null')) return true;
+    return parseNumber();
+  }
+
+  if (!parseValue()) return false;
+  skipWhitespace();
+  return index === value.length;
 }
 
 function isValidValue(value) {
@@ -1289,6 +1660,590 @@ scenarios:
 
     assertApi('gtmOnSuccess').wasCalled();
     assertApi('gtmOnFailure').wasNotCalled();
+- name: '[V3 Order] URL, headers and payload are correctly built'
+  code: |-
+    const expectedValue = 'test';
+    const inputProducts = [{ productId: 'sku1', price: 10, quantity: 2, variantId: 'red' }];
+    const inputIdentifiers = [{ name: 'ext_id', value: expectedValue }, { name: 'phone_id', value: expectedValue }];
+    const expectedIdentifiers = makeTableMap(inputIdentifiers, 'name', 'value');
+    expectedIdentifiers.email_id = expectedValue;
+
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackOrder';
+    mockData.email = expectedValue;
+    mockData.customerIdentifiers = inputIdentifiers;
+    mockData.orderProperties = [
+      { name: 'id', value: 'order-1' },
+      { name: 'amount', value: '120.75' },
+      { name: 'status', value: 'shipped' },
+      { name: 'products', value: inputProducts },
+      { name: 'createdAt', value: '2025-01-01T10:00:00Z' },
+      { name: 'updatedAt', value: '2025-01-02T10:00:00Z' }
+    ];
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://api.brevo.com/v3/orders/status');
+      assertThat(options.method).isEqualTo('POST');
+      assertThat(options.headers['api-key']).isEqualTo(mockData.clientKey);
+      assertThat(options.headers['ma-key']).isUndefined();
+      assertThat(options.headers['Content-Type']).isEqualTo('application/json');
+      assertThat(options.headers['Accept']).isEqualTo('application/json');
+
+      assertThat(bodyParsed).isEqualTo({
+        id: 'order-1',
+        amount: 120.75,
+        status: 'shipped',
+        products: inputProducts,
+        createdAt: '2025-01-01T10:00:00Z',
+        updatedAt: '2025-01-02T10:00:00Z',
+        identifiers: expectedIdentifiers
+      });
+
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[V3 Order] Forces v3 even when apiVersion is v2'
+  code: |-
+    mockData.apiVersion = 'v2';
+    mockData.type = 'trackOrder';
+    mockData.email = 'test@example.com';
+    mockData.orderProperties = [
+      { name: 'id', value: 'order-1' },
+      { name: 'amount', value: '10' },
+      { name: 'status', value: 'completed' },
+      { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 1 }] }
+    ];
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      const bodyParsed = JSON.parse(body);
+      assertThat(url).isEqualTo('https://api.brevo.com/v3/orders/status');
+      assertThat(options.headers['api-key']).isEqualTo(mockData.clientKey);
+      assertThat(options.headers['ma-key']).isUndefined();
+      assertThat(bodyParsed.identifiers.email_id).isEqualTo('test@example.com');
+      assertThat(bodyParsed.email).isUndefined();
+
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[V3 Order] Automaps amount, status, products and dates from event data'
+  code: |-
+    // getTimestampMillis is mocked in setup as 1747945830456 (2025-05-22T20:30:30.456Z)
+    const expectedDate = '2025-05-22T20:30:30Z';
+
+    mockData.type = 'trackOrder';
+    mockData.email = 'test@example.com';
+    mockData.orderProperties = [{ name: 'id', value: 'order-1' }];
+
+    mock('getAllEventData', () => ({
+      event_name: 'purchase',
+      value: '99.5',
+      items: [
+        { item_id: 'sku1', price: '10', quantity: 2, item_variant: 'red' },
+        { item_id: 'sku2', price: 5 }
+      ]
+    }));
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      const bodyParsed = JSON.parse(body);
+      assertThat(bodyParsed.id).isEqualTo('order-1');
+      assertThat(bodyParsed.amount).isEqualTo(99.5);
+      assertThat(bodyParsed.status).isEqualTo('completed');
+      assertThat(bodyParsed.products).isEqualTo([
+        { productId: 'sku1', price: 10, variantId: 'red', quantity: 2 },
+        { productId: 'sku2', price: 5, quantity: 1 }
+      ]);
+      assertThat(bodyParsed.createdAt).isEqualTo(expectedDate);
+      assertThat(bodyParsed.updatedAt).isEqualTo(expectedDate);
+
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[V3 Order] Parses products from a JSON string'
+  code: |-
+    mockData.type = 'trackOrder';
+    mockData.email = 'test@example.com';
+    mockData.orderProperties = [
+      { name: 'id', value: 'order-1' },
+      { name: 'amount', value: '1' },
+      { name: 'status', value: 'completed' },
+      { name: 'products', value: '[{"productId":"a","price":1,"quantity":1}]' }
+    ];
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      const bodyParsed = JSON.parse(body);
+      assertThat(bodyParsed.products).isEqualTo([{ productId: 'a', price: 1, quantity: 1 }]);
+
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[V3 Order] Uses quantityFloat for fractional item quantities'
+  code: |-
+    mockData.type = 'trackOrder';
+    mockData.email = 'test@example.com';
+    mockData.orderProperties = [{ name: 'id', value: 'order-1' }];
+
+    mock('getAllEventData', () => ({
+      event_name: 'purchase',
+      value: 15,
+      items: [{ item_id: 'sku1', price: 10, quantity: 1.5 }]
+    }));
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      const bodyParsed = JSON.parse(body);
+      assertThat(bodyParsed.products).isEqualTo([{ productId: 'sku1', price: 10, quantityFloat: 1.5 }]);
+
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[V3 Order] Request is sent without customer identifiers'
+  code: |-
+    mockData.type = 'trackOrder';
+    mockData.email = undefined;
+    mockData.customerIdentifiers = undefined;
+    mockData.orderProperties = [
+      { name: 'id', value: 'order-1' },
+      { name: 'amount', value: '10' },
+      { name: 'status', value: 'completed' },
+      { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 1 }] }
+    ];
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      const bodyParsed = JSON.parse(body);
+      assertThat(bodyParsed.identifiers).isEqualTo({});
+
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[V3 Order] Converts Unix timestamps in seconds and milliseconds to UTC date-time'
+  code: |-
+    // 1747945830 s / 1747945830456 ms = 2025-05-22T20:30:30Z
+    [
+      {
+        description: 'Numbers',
+        createdAt: 1747945830,
+        updatedAt: 1747945830456,
+        expectedDate: '2025-05-22T20:30:30Z'
+      },
+      {
+        description: 'Numeric strings',
+        createdAt: '1747945830',
+        updatedAt: '1747945830456',
+        expectedDate: '2025-05-22T20:30:30Z'
+      },
+      {
+        description: 'Exactly midnight',
+        createdAt: 1747872000,
+        updatedAt: 1747872000000,
+        expectedDate: '2025-05-22T00:00:00Z'
+      },
+      {
+        description: 'First day of the year at midnight',
+        createdAt: 1704067200,
+        updatedAt: 1704067200000,
+        expectedDate: '2024-01-01T00:00:00Z'
+      },
+      {
+        description: 'Leap day and last second of February',
+        createdAt: 1709164800,
+        updatedAt: 1709251199000,
+        expectedCreatedAt: '2024-02-29T00:00:00Z',
+        expectedUpdatedAt: '2024-02-29T23:59:59Z'
+      }
+    ].forEach((scenario) => {
+      const expectedCreatedAt = scenario.expectedCreatedAt || scenario.expectedDate;
+      const expectedUpdatedAt = scenario.expectedUpdatedAt || scenario.expectedDate;
+
+      mockData.type = 'trackOrder';
+      mockData.email = 'test@example.com';
+      mockData.orderProperties = [
+        { name: 'id', value: 'order-1' },
+        { name: 'amount', value: '10' },
+        { name: 'status', value: 'completed' },
+        { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 1 }] },
+        { name: 'createdAt', value: scenario.createdAt },
+        { name: 'updatedAt', value: scenario.updatedAt }
+      ];
+
+      mock('sendHttpRequest', (url, callback, options, body) => {
+        const bodyParsed = JSON.parse(body);
+        assertThat(bodyParsed.createdAt).isEqualTo(expectedCreatedAt);
+        assertThat(bodyParsed.updatedAt).isEqualTo(expectedUpdatedAt);
+
+        callback(204, {}, '');
+      });
+
+      runCode(mockData);
+
+      assertApi('sendHttpRequest').wasCalled();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[V3 Order] Keeps valid UTC date-time strings, with or without milliseconds'
+  code: |-
+    mockData.type = 'trackOrder';
+    mockData.email = 'test@example.com';
+    mockData.orderProperties = [
+      { name: 'id', value: 'order-1' },
+      { name: 'amount', value: '10' },
+      { name: 'status', value: 'completed' },
+      { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 1 }] },
+      { name: 'createdAt', value: '2025-01-01T10:00:00Z' },
+      { name: 'updatedAt', value: '2025-01-02T10:00:00.123Z' }
+    ];
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      const bodyParsed = JSON.parse(body);
+      assertThat(bodyParsed.createdAt).isEqualTo('2025-01-01T10:00:00Z');
+      assertThat(bodyParsed.updatedAt).isEqualTo('2025-01-02T10:00:00.123Z');
+
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[Required Fields] Order request is not sent when dates are not UTC formatted'
+  code: |-
+    [
+      { description: 'Day/month/year', field: 'createdAt', value: '22/05/2025' },
+      { description: 'Date only', field: 'updatedAt', value: '2025-05-22' },
+      { description: 'Timezone offset', field: 'createdAt', value: '2025-05-22T22:30:30+02:00' },
+      { description: 'Space separator', field: 'updatedAt', value: '2025-05-22 20:30:30Z' }
+    ].forEach((scenario) => {
+      mockData.type = 'trackOrder';
+      mockData.email = 'test@example.com';
+      mockData.orderProperties = [
+        { name: 'id', value: 'order-1' },
+        { name: 'amount', value: '10' },
+        { name: 'status', value: 'completed' },
+        { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 1 }] },
+        { name: scenario.field, value: scenario.value }
+      ];
+
+      runCode(mockData);
+
+      assertApi('sendHttpRequest').wasNotCalled();
+      assertApi('logToConsole').wasCalled();
+      assertApi('gtmOnSuccess').wasNotCalled();
+      assertApi('gtmOnFailure').wasCalled();
+    });
+- name: '[Required Fields] Order request is not sent when required order fields are
+    missing'
+  code: |-
+    const products = [{ productId: 'sku1', price: 10, quantity: 1 }];
+
+    [
+      {
+        description: 'Missing order ID',
+        eventData: { event_name: 'purchase', value: 10 },
+        orderProperties: [{ name: 'products', value: products }]
+      },
+      {
+        description: 'Products is an invalid JSON string',
+        eventData: { event_name: 'purchase', value: 10, items: [{ item_id: 'sku1', price: 10 }] },
+        orderProperties: [{ name: 'id', value: 'order-1' }, { name: 'products', value: '[not json' }]
+      },
+      {
+        description: 'Products is a malformed JSON array',
+        eventData: { event_name: 'purchase', value: 10, items: [{ item_id: 'sku1', price: 10 }] },
+        orderProperties: [{ name: 'id', value: 'order-1' }, { name: 'products', value: '[{"productId": }]' }]
+      },
+      {
+        description: 'Products is a plain text string',
+        eventData: { event_name: 'purchase', value: 10, items: [{ item_id: 'sku1', price: 10 }] },
+        orderProperties: [{ name: 'id', value: 'order-1' }, { name: 'products', value: 'sku1, sku2' }]
+      },
+      {
+        description: 'Missing amount',
+        eventData: { event_name: 'purchase' },
+        orderProperties: [{ name: 'id', value: 'order-1' }, { name: 'products', value: products }]
+      },
+      {
+        description: 'No products and no items',
+        eventData: { event_name: 'purchase', value: 10 },
+        orderProperties: [{ name: 'id', value: 'order-1' }]
+      },
+      {
+        description: 'Empty items array',
+        eventData: { event_name: 'purchase', value: 10, items: [] },
+        orderProperties: [{ name: 'id', value: 'order-1' }]
+      },
+      {
+        description: 'Only null entries in items',
+        eventData: { event_name: 'purchase', value: 10, items: [null, null] },
+        orderProperties: [{ name: 'id', value: 'order-1' }]
+      },
+      {
+        description: 'Item without product ID',
+        eventData: { event_name: 'purchase', value: 10, items: [{ item_name: 'Shirt', price: 10 }] },
+        orderProperties: [{ name: 'id', value: 'order-1' }]
+      },
+      {
+        description: 'Product with non-numeric price',
+        eventData: { event_name: 'purchase', value: 10 },
+        orderProperties: [
+          { name: 'id', value: 'order-1' },
+          { name: 'products', value: [{ productId: 'sku1', price: 'abc', quantity: 1 }] }
+        ]
+      },
+      {
+        description: 'Product with non-numeric quantity',
+        eventData: { event_name: 'purchase', value: 10 },
+        orderProperties: [
+          { name: 'id', value: 'order-1' },
+          { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 'abc' }] }
+        ]
+      }
+    ].forEach((scenario) => {
+      mockData.type = 'trackOrder';
+      mockData.email = 'test@example.com';
+      mockData.orderProperties = scenario.orderProperties;
+
+      mock('getAllEventData', () => scenario.eventData);
+
+      runCode(mockData);
+
+      assertApi('sendHttpRequest').wasNotCalled();
+      assertApi('logToConsole').wasCalled();
+      assertApi('gtmOnSuccess').wasNotCalled();
+      assertApi('gtmOnFailure').wasCalled();
+    });
+- name: '[V3 Order] Normalizes Brevo and GA4 products and skips invalid entries'
+  code: |-
+    mockData.type = 'trackOrder';
+    mockData.email = 'test@example.com';
+    mockData.orderProperties = [
+      { name: 'id', value: 'order-1' },
+      { name: 'amount', value: '30' },
+      { name: 'status', value: 'completed' },
+      {
+        name: 'products',
+        value: [
+          null,
+          'not-a-product',
+          { productId: 123, price: '10', quantity: '2', variantId: 7 },
+          { productId: 'sku2', price: 5, quantityFloat: '1.5' },
+          { item_id: 456, price: '2.5', item_variant: 'blue' }
+        ]
+      }
+    ];
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      const bodyParsed = JSON.parse(body);
+      assertThat(bodyParsed.products).isEqualTo([
+        { productId: '123', price: 10, quantity: 2, variantId: '7' },
+        { productId: 'sku2', price: 5, quantityFloat: 1.5 },
+        { productId: '456', price: 2.5, quantity: 1, variantId: 'blue' }
+      ]);
+
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[Required Fields] Log reason names the missing or invalid fields'
+  code: |-
+    [
+      {
+        description: 'V2 without email',
+        mockData: { apiVersion: 'v2', type: 'trackPage', page: 'test' },
+        eventData: {},
+        expectedReason: 'Missing or invalid field(s): email.'
+      },
+      {
+        description: 'V3 without identifiers',
+        mockData: { apiVersion: 'v3', type: 'trackPage', page: 'test' },
+        eventData: {},
+        expectedReason: 'Missing or invalid field(s): identifiers (email_id, phone_id or ext_id).'
+      },
+      {
+        description: 'Order with several invalid fields',
+        mockData: {
+          type: 'trackOrder',
+          orderProperties: [
+            { name: 'createdAt', value: '22/05/2025' },
+            { name: 'products', value: [{ productId: 'sku1', price: 'abc', quantity: 1 }] }
+          ]
+        },
+        eventData: { event_name: 'purchase', value: 10 },
+        expectedReason:
+          'Missing or invalid field(s): id, createdAt (expected UTC YYYY-MM-DDTHH:mm:ssZ), products[0].price.'
+      }
+    ].forEach((scenario) => {
+      let loggedReason;
+      mock('logToConsole', (message) => {
+        loggedReason = JSON.parse(message).Reason;
+      });
+      mock('getAllEventData', () => scenario.eventData);
+
+      const testData = { clientKey: mockData.clientKey };
+      for (const key in scenario.mockData) testData[key] = scenario.mockData[key];
+
+      runCode(testData);
+
+      assertThat(loggedReason).isEqualTo(scenario.expectedReason);
+      assertApi('sendHttpRequest').wasNotCalled();
+      assertApi('gtmOnFailure').wasCalled();
+    });
+- name: '[V3 Order] Uses email and phone from user_data when Email is empty'
+  code: |-
+    const hashedEmail = '973dfe463ec85785f5f95af5ba3906eedb2d931c24e69824a89ea65dba4e813b';
+
+    [
+      {
+        description: 'Raw user_data values are used',
+        email: undefined,
+        customerIdentifiers: undefined,
+        userData: { email_address: 'user@example.com', phone_number: '+15550001111' },
+        expectedIdentifiers: { email_id: 'user@example.com', phone_id: '+15550001111' }
+      },
+      {
+        description: 'Falls back to user_data.email',
+        email: undefined,
+        customerIdentifiers: undefined,
+        userData: { email: 'user@example.com' },
+        expectedIdentifiers: { email_id: 'user@example.com' }
+      },
+      {
+        description: 'Hashed values are ignored',
+        email: undefined,
+        customerIdentifiers: undefined,
+        userData: { email_address: hashedEmail, email: 'raw@example.com', phone_number: hashedEmail },
+        expectedIdentifiers: { email_id: 'raw@example.com' }
+      },
+      {
+        description: 'Email field takes precedence over user_data',
+        email: 'field@example.com',
+        customerIdentifiers: undefined,
+        userData: { email_address: 'user@example.com' },
+        expectedIdentifiers: { email_id: 'field@example.com' }
+      },
+      {
+        description: 'Customer Identifiers take precedence over user_data',
+        email: undefined,
+        customerIdentifiers: [{ name: 'phone_id', value: '+15559998888' }],
+        userData: { email_address: 'user@example.com', phone_number: '+15550001111' },
+        expectedIdentifiers: { email_id: 'user@example.com', phone_id: '+15559998888' }
+      }
+    ].forEach((scenario) => {
+      mockData.type = 'trackOrder';
+      mockData.email = scenario.email;
+      mockData.customerIdentifiers = scenario.customerIdentifiers;
+      mockData.orderProperties = [
+        { name: 'id', value: 'order-1' },
+        { name: 'amount', value: '10' },
+        { name: 'status', value: 'completed' },
+        { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 1 }] }
+      ];
+
+      mock('getAllEventData', () => ({ event_name: 'purchase', user_data: scenario.userData }));
+
+      mock('sendHttpRequest', (url, callback, options, body) => {
+        const bodyParsed = JSON.parse(body);
+        assertThat(bodyParsed.identifiers).isEqualTo(scenario.expectedIdentifiers);
+
+        callback(204, {}, '');
+      });
+
+      runCode(mockData);
+
+      assertApi('sendHttpRequest').wasCalled();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[V3] user_data identifiers are not used for non-order types'
+  code: |-
+    mockData.apiVersion = 'v3';
+    mockData.type = 'trackPage';
+    mockData.page = 'test';
+    mockData.email = undefined;
+
+    mock('getAllEventData', () => ({
+      event_name: 'page_view',
+      user_data: { email_address: 'user@example.com', phone_number: '+15550001111' }
+    }));
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasNotCalled();
+    assertApi('gtmOnSuccess').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+- name: '[Response] Order calls gtmOnSuccess on 204 response'
+  code: |-
+    mockData.type = 'trackOrder';
+    mockData.email = 'test@example.com';
+    mockData.useOptimisticScenario = false;
+    mockData.orderProperties = [
+      { name: 'id', value: 'order-1' },
+      { name: 'amount', value: '10' },
+      { name: 'status', value: 'completed' },
+      { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 1 }] }
+    ];
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      callback(204, {}, '');
+    });
+
+    runCode(mockData);
+
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[Response] Order calls gtmOnFailure on 400 response'
+  code: |-
+    mockData.type = 'trackOrder';
+    mockData.email = 'test@example.com';
+    mockData.useOptimisticScenario = false;
+    mockData.orderProperties = [
+      { name: 'id', value: 'order-1' },
+      { name: 'amount', value: '10' },
+      { name: 'status', value: 'invalid' },
+      { name: 'products', value: [{ productId: 'sku1', price: 10, quantity: 1 }] }
+    ];
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      callback(400, {}, '{"code":"invalid_parameter","message":"Invalid status"}');
+    });
+
+    runCode(mockData);
+
+    assertApi('gtmOnSuccess').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
 setup: |-
   const JSON = require('JSON');
   const makeTableMap = require('makeTableMap');
@@ -1322,9 +2277,14 @@ setup: |-
 
 ___NOTES___
 
+2026-10-06 - Change Notes:
+  - Add "Track order" type that creates or updates orders via Brevo's v3 Orders API
+  - Add unit tests for order payloads, field automapping, product normalization, user_data identifiers, validation messages and response handling
+
 2026-05-25 Change Notes:
  - Logging removal.
 
 
 Created on 28/07/2023, 15:15:15
+
 
