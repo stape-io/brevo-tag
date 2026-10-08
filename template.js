@@ -53,14 +53,14 @@ switch (data.type) {
 ==============================================================================*/
 
 function sendEvent(eventName, brevoEventData) {
-  const invalidFields = getInvalidRequiredFields(brevoEventData);
-  if (invalidFields.length > 0) {
+  if (areThereRequiredFieldsMissing(brevoEventData)) {
     log({
       Name: 'Brevo',
       Type: 'Message',
       EventName: eventName,
       Message: '🛑 [ERROR] Request was not sent. API ' + API_VERSION,
-      Reason: 'Missing or invalid field(s): ' + invalidFields.join(', ') + '.'
+      Reason:
+        'One or more fields are missing or invalid: v2: Email; v3: Email, Phone Number or External ID; Order: ID, Amount, Status, Products, and Created At / Updated At.'
     });
     return data.gtmOnFailure();
   }
@@ -70,7 +70,10 @@ function sendEvent(eventName, brevoEventData) {
     url,
     (statusCode, headers, body) => {
       if (!data.useOptimisticScenario) {
-        if (statusCode >= 200 && statusCode < 300) return data.gtmOnSuccess();
+        // The Orders API documents 204 as its only success response.
+        const isSuccess =
+          data.type === 'trackOrder' ? statusCode === 204 : statusCode >= 200 && statusCode < 300;
+        if (isSuccess) return data.gtmOnSuccess();
         return data.gtmOnFailure();
       }
     },
@@ -151,25 +154,16 @@ function formatEventPayloadByApiVersion(event) {
           : {}
       }),
       trackOrder: () => {
-        const orderData = data.orderProperties
-          ? makeTableMap(data.orderProperties, 'name', 'value')
-          : {};
-        const now = convertTimestampToISO(getTimestampMillis());
-        return {
-          id: orderData.id,
-          amount: makeNumber(isValidValue(orderData.amount) ? orderData.amount : eventData.value),
-          status: orderData.status || 'completed',
-          products: getOrderProducts(orderData.products),
-          createdAt: getOrderDate(orderData.createdAt, now),
-          updatedAt: getOrderDate(orderData.updatedAt, now),
-          identifiers: mergeObj(
-            {
-              email_id: email || getUserDataIdentifier(['email_address', 'email']),
-              phone_id: getUserDataIdentifier(['phone_number'])
-            },
-            data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
-          )
-        };
+        const orderPayload = mergeObj(
+          getRequiredOrderParams(data, eventData),
+          getOptionalOrderParams(data)
+        );
+        const identifiers = getUserDataIdentifiers(data, eventData);
+        const hasIdentifier = ['email_id', 'phone_id', 'ext_id'].some((p) =>
+          isValidValue(identifiers[p])
+        );
+        if (hasIdentifier) orderPayload.identifiers = identifiers;
+        return orderPayload;
       }
     }
   };
@@ -177,45 +171,26 @@ function formatEventPayloadByApiVersion(event) {
   return eventPayloadByApiVersion[API_VERSION][event]();
 }
 
-function getInvalidRequiredFields(brevoEventData) {
+function areThereRequiredFieldsMissing(brevoEventData) {
   const requiredFieldsValidationByApiVersion = {
     v2: () => {
-      if (!isValidValue(brevoEventData.email)) return ['email'];
-      return [];
+      if (!isValidValue(brevoEventData.email)) return true;
+      return false;
     },
     v3: () => {
-      // Identifiers are optional for orders, but the order fields are required.
       if (data.type === 'trackOrder') {
-        const invalidFields = ['id', 'amount', 'status'].filter(
-          (param) => !isValidValue(brevoEventData[param])
-        );
-        ['createdAt', 'updatedAt'].forEach((date) => {
-          if (!isValidOrderDate(brevoEventData[date])) {
-            invalidFields.push(date + ' (expected UTC YYYY-MM-DDTHH:mm:ssZ)');
-          }
-        });
-
-        const products = brevoEventData.products;
-        if (getType(products) !== 'array' || products.length === 0) {
-          invalidFields.push('products (empty)');
-        } else {
-          products.forEach((product, index) => {
-            const prefix = 'products[' + index + '].';
-            if (!isValidValue(product.productId)) invalidFields.push(prefix + 'productId');
-            if (!isValidValue(product.price)) invalidFields.push(prefix + 'price');
-            if (!isValidValue(product.quantity) && !isValidValue(product.quantityFloat)) {
-              invalidFields.push(prefix + 'quantity');
-            }
-          });
-        }
-        return invalidFields;
+        const hasInvalidRequiredOrderParameter =
+          ['id', 'amount', 'status'].some((param) => !isValidValue(brevoEventData[param])) ||
+          ['createdAt', 'updatedAt'].some((date) => !isValidUTCDate(brevoEventData[date])) ||
+          areThereInvalidOrderProducts(brevoEventData.products);
+        return hasInvalidRequiredOrderParameter;
       }
 
       const doesNotHaveValidIdentifier = ['email_id', 'phone_id', 'ext_id'].every(
         (p) => !isValidValue(brevoEventData.identifiers[p])
       );
-      if (doesNotHaveValidIdentifier) return ['identifiers (email_id, phone_id or ext_id)'];
-      return [];
+      if (doesNotHaveValidIdentifier) return true;
+      return false;
     }
   };
   return requiredFieldsValidationByApiVersion[API_VERSION]();
@@ -224,10 +199,11 @@ function getInvalidRequiredFields(brevoEventData) {
 function getRequestUrl() {
   const baseUrlByApiVersion = {
     v2: 'https://in-automate.brevo.com/api/v2/' + data.type,
-    v3: 'https://api.brevo.com/v3/events'
+    v3:
+      data.type === 'trackOrder'
+        ? 'https://api.brevo.com/v3/orders/status'
+        : 'https://api.brevo.com/v3/events'
   };
-
-  if (data.type == 'trackOrder') return 'https://api.brevo.com/v3/orders/status';
   return baseUrlByApiVersion[API_VERSION];
 }
 
@@ -243,62 +219,6 @@ function getRequestHeaders() {
   return mergeObj(baseHeaders, headersByApiVersion[API_VERSION]);
 }
 
-function getOrderDate(value, fallback) {
-  if (!isValidValue(value)) return fallback;
-
-  const isNumericString = getType(value) === 'string' && value.match('^[0-9]+$') !== null;
-  if (getType(value) === 'number' || isNumericString) {
-    const timestamp = makeNumber(value);
-    return convertTimestampToISO(timestamp < 100000000000 ? timestamp * 1000 : timestamp);
-  }
-  return value;
-}
-
-function isValidOrderDate(value) {
-  return (
-    getType(value) === 'string' &&
-    value.match('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$') !== null
-  );
-}
-
-function getOrderProducts(products) {
-  if (getType(products) === 'string') products = isValidJson(products) ? JSON.parse(products) : [];
-  if (getType(products) !== 'array') products = eventData.items || [];
-  if (getType(products) !== 'array') return;
-
-  // Accepts both Brevo (productId, variantId) and GA4 (item_id, item_variant) product formats.
-  return products
-    .filter((item) => getType(item) === 'object')
-    .map((item) => {
-      const productId = isValidValue(item.productId) ? item.productId : item.item_id || item.id;
-      const variantId = isValidValue(item.variantId) ? item.variantId : item.item_variant;
-      // Nested ternaries are evaluated left-to-right in the GTM sandbox, so plain ifs are used.
-      let rawQuantity = 1;
-      if (isValidValue(item.quantity)) rawQuantity = item.quantity;
-      else if (isValidValue(item.quantityFloat)) rawQuantity = item.quantityFloat;
-      const quantity = makeNumber(rawQuantity);
-      const product = {
-        productId: isValidValue(productId) ? makeString(productId) : undefined,
-        price: makeNumber(item.price),
-        variantId: isValidValue(variantId) ? makeString(variantId) : undefined
-      };
-      if (quantity % 1 === 0) product.quantity = quantity;
-      else product.quantityFloat = quantity;
-      return product;
-    });
-}
-
-// Hashed values are ignored, as Brevo needs the raw identifier to match the contact.
-function getUserDataIdentifier(keys) {
-  const userData = eventData.user_data || {};
-  for (let i = 0; i < keys.length; i++) {
-    const value = userData[keys[i]];
-    if (isValidValue(value) && makeString(value).match('^[A-Fa-f0-9]{64}$') === null) {
-      return makeString(value);
-    }
-  }
-}
-
 function storeCookie(name, value) {
   setCookie('brevo_' + name, value, {
     domain: 'auto',
@@ -310,25 +230,141 @@ function storeCookie(name, value) {
   });
 }
 
+function getUserDataIdentifiers(data, eventData) {
+  const userIdentifiers = mergeObj(
+    { email: email },
+    data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
+  );
+  const userData = eventData.user_data || {};
+  const autoMap = data.autoMapEventData;
+  return {
+    email_id:
+      userIdentifiers.email ||
+      (autoMap
+        ? getFirstUnhashedValue([
+            eventData.email,
+            eventData.email_address,
+            userData.email,
+            userData.email_address
+          ])
+        : undefined),
+    ext_id: userIdentifiers.ext_id || (autoMap ? eventData.user_id || userData.user_id : undefined),
+    phone_id:
+      userIdentifiers.phone_id ||
+      (autoMap
+        ? getFirstValidPhoneNumber([
+            eventData.phone,
+            eventData.phone_number,
+            userData.phone_number,
+            userData.phone
+          ])
+        : undefined)
+  };
+}
+
+function getOrderProducts(data, eventData) {
+  const rawProducts =
+    data.products || (data.autoMapEventData ? eventData.items || eventData.products : []);
+  if (getType(rawProducts) !== 'array') return [];
+
+  return rawProducts
+    .filter((product) => getType(product) === 'object')
+    .map((product) => {
+      const productId = product.productId || product.item_id;
+      const quantity = makeNumber(product.quantity || product.quantityFloat || 1);
+      return {
+        productId: isValidValue(productId) ? makeString(productId) : undefined,
+        variantId: product.variantId || product.variant_id || product.item_variant,
+        price: makeNumber(isValidValue(product.price) ? product.price : product.item_price),
+        quantity: !isFloatNumber(quantity) ? quantity : undefined,
+        quantityFloat: isFloatNumber(quantity) ? quantity : undefined
+      };
+    });
+}
+
+function areThereInvalidOrderProducts(products) {
+  if (getType(products) !== 'array' || products.length === 0) return true;
+  return products.some(
+    (product) =>
+      !isValidValue(product.productId) ||
+      !isValidValue(product.price) ||
+      (!isValidValue(product.quantity) && !isValidValue(product.quantityFloat))
+  );
+}
+
+function getOptionalOrderParams(data) {
+  const properties = data.properties ? makeTableMap(data.properties, 'name', 'value') : {};
+  const optionalOrderParams = {};
+
+  if (getType(properties.billing) === 'object') optionalOrderParams.billing = properties.billing;
+  if (getType(properties.coupons) === 'array') optionalOrderParams.coupons = properties.coupons;
+  if (getType(properties.metaInfo) === 'object') optionalOrderParams.metaInfo = properties.metaInfo;
+  if (isValidValue(properties.storeId))
+    optionalOrderParams.storeId = makeString(properties.storeId);
+
+  return optionalOrderParams;
+}
+
+function getRequiredOrderParams(data, eventData) {
+  const now = convertTimestampToISO(getTimestampMillis());
+  const requiredParams = {
+    id: data.orderId || (data.autoMapEventData ? eventData.transaction_id : undefined),
+    amount: makeNumber(data.amount || (data.autoMapEventData ? eventData.value : undefined)),
+    status: data.status,
+    products: getOrderProducts(data, eventData),
+    createdAt: isValidValue(data.createdAt) ? data.createdAt : now,
+    updatedAt: isValidValue(data.updatedAt) ? data.updatedAt : now
+  };
+
+  return requiredParams;
+}
+
 /*==============================================================================
   Helpers
 ==============================================================================*/
 
-function getUrl(eventData) {
-  return eventData.page_location || getRequestHeader('referer') || eventData.page_referrer;
+function isValidUTCDate(date) {
+  return (
+    getType(date) === 'string' &&
+    date.match('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$') !== null
+  );
 }
 
-function shouldExitEarly(data, eventData) {
-  if (!isConsentGivenOrNotRequired(data, eventData)) {
-    data.gtmOnSuccess();
-    return true;
-  }
+function getFirstUnhashedValue(values) {
+  return values.filter((value) => isValidValue(value) && !isHashed(value))[0];
+}
 
-  const url = getUrl(eventData);
-  if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) {
-    data.gtmOnSuccess();
-    return true;
-  }
+function getFirstValidPhoneNumber(values) {
+  return values.filter(isValidValue).map(normalizePhoneNumber).filter(isValidValue)[0];
+}
+
+function normalizePhoneNumber(phoneNumber) {
+  phoneNumber = makeString(phoneNumber)
+    .split(' ')
+    .join('')
+    .split('-')
+    .join('')
+    .split('.')
+    .join('')
+    .split('(')
+    .join('')
+    .split(')')
+    .join('');
+  if (isHashed(phoneNumber)) return;
+  if (phoneNumber[0] !== '+') phoneNumber = '+' + phoneNumber;
+  if (phoneNumber.match('^\\+[1-9][0-9]{1,14}$') === null) return;
+  return phoneNumber;
+}
+
+function isHashed(value) {
+  return makeString(value).match('^[A-Fa-f0-9]{64}$') !== null;
+}
+
+function isFloatNumber(number) {
+  number = makeNumber(number);
+  if (!isValidValue(number)) return false;
+  if (Math.floor(number) === number) return false;
+  return true;
 }
 
 function convertTimestampToISO(timestamp) {
@@ -398,96 +434,21 @@ function convertTimestampToISO(timestamp) {
   );
 }
 
-// JSON.parse throws on invalid JSON in the GTM sandbox and try/catch is not available,
-// so the string is checked with a small JSON grammar parser before being parsed.
-function isValidJson(value) {
-  if (getType(value) !== 'string') return false;
-  let index = 0;
+function getUrl(eventData) {
+  return eventData.page_location || getRequestHeader('referer') || eventData.page_referrer;
+}
 
-  function skipWhitespace() {
-    while (index < value.length && ' \t\n\r'.indexOf(value.charAt(index)) !== -1) index++;
-  }
-
-  function consume(text) {
-    if (value.substring(index, index + text.length) !== text) return false;
-    index += text.length;
+function shouldExitEarly(data, eventData) {
+  if (!isConsentGivenOrNotRequired(data, eventData)) {
+    data.gtmOnSuccess();
     return true;
   }
 
-  function parseString() {
-    if (!consume('"')) return false;
-    while (index < value.length) {
-      const char = value.charAt(index);
-      if (char === '"') {
-        index++;
-        return true;
-      }
-      if (char < ' ') return false; // Unescaped control characters are not allowed.
-      if (char !== '\\') {
-        index++;
-        continue;
-      }
-
-      const escaped = value.charAt(index + 1);
-      if (escaped === 'u') {
-        if (value.substring(index + 2, index + 6).match('^[0-9A-Fa-f]{4}$') === null) return false;
-        index += 6;
-      } else {
-        if (escaped === '' || '"\\/bfnrt'.indexOf(escaped) === -1) return false;
-        index += 2;
-      }
-    }
-    return false;
-  }
-
-  function parseNumber() {
-    const match = value.substring(index).match('^-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?');
-    if (match === null) return false;
-    index += match[0].length;
+  const url = getUrl(eventData);
+  if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) {
+    data.gtmOnSuccess();
     return true;
   }
-
-  function parseArray() {
-    consume('[');
-    skipWhitespace();
-    if (consume(']')) return true;
-    while (true) {
-      if (!parseValue()) return false;
-      skipWhitespace();
-      if (consume(']')) return true;
-      if (!consume(',')) return false;
-    }
-  }
-
-  function parseObject() {
-    consume('{');
-    skipWhitespace();
-    if (consume('}')) return true;
-    while (true) {
-      skipWhitespace();
-      if (!parseString()) return false;
-      skipWhitespace();
-      if (!consume(':')) return false;
-      if (!parseValue()) return false;
-      skipWhitespace();
-      if (consume('}')) return true;
-      if (!consume(',')) return false;
-    }
-  }
-
-  function parseValue() {
-    skipWhitespace();
-    const char = value.charAt(index);
-    if (char === '{') return parseObject();
-    if (char === '[') return parseArray();
-    if (char === '"') return parseString();
-    if (consume('true') || consume('false') || consume('null')) return true;
-    return parseNumber();
-  }
-
-  if (!parseValue()) return false;
-  skipWhitespace();
-  return index === value.length;
 }
 
 function isValidValue(value) {
