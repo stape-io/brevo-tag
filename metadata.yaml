@@ -1,6 +1,8 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/brevo-tag'
 versions:
+  - sha: 262c78e393407fb4e6beff8b1694a1df48a57381
+    changeNotes: Add order tracking.
   - sha: 7868976852217f2eb6c18a4d3271cfdd355ccf24
     changeNotes: Logging removal.
   - sha: cd26e3bc26a4e9d5318a9a89b30077cae9e83918
