@@ -87,7 +87,7 @@ ___TEMPLATE_PARAMETERS___
           },
           {
             "value": "trackOrder",
-            "displayValue": "Create or Update Order",
+            "displayValue": "Create or Update Order (v3 only)",
             "help": "Creates or updates an order in your Brevo ecommerce module. See information below regarding mandatory fields for this action."
           }
         ],
@@ -178,7 +178,96 @@ ___TEMPLATE_PARAMETERS___
         "name": "storeEmail",
         "checkboxText": "Store email in cookies",
         "simpleValueType": true,
-        "help": "Enable email persistence via cookies to serve as a fallback for events where no email is specified."
+        "help": "Enable email persistence via cookies to serve as a fallback for events where no email is specified. The cookie can be configured in the \u003ci\u003eCookie Settings\u003c/i\u003e section.",
+        "subParams": [
+          {
+            "type": "GROUP",
+            "name": "cookieSettingsGroup",
+            "displayName": "Cookie Settings",
+            "groupStyle": "ZIPPY_CLOSED",
+            "subParams": [
+              {
+                "type": "TEXT",
+                "name": "cookieDomain",
+                "displayName": "Cookie Domain",
+                "simpleValueType": true,
+                "valueHint": "example.com",
+                "help": "Use this option to override the cookie domain. \n\u003cbr\u003e \nEnter your website\u0027s top-level domain as a fixed value (e.g., example.com). \n\u003cbr\u003e\n If left empty or using the \"auto\" value, the domain will be automatically determined using the following priority: \u003cul\u003e \n\u003cli\u003eDomain of the \u003ci\u003epage_location\u003c/i\u003e Event Data parameter (if present).\u003c/li\u003e\n\u003cli\u003eDomain of the \u003ci\u003eReferer\u003c/i\u003e header (if present).\u003c/li\u003e\n\u003cli\u003eDomain of the \u003ci\u003eForwarded\u003c/i\u003e header (if present).\u003c/li\u003e\n\u003cli\u003eDomain of the \u003ci\u003eX-Forwarded-Host\u003c/i\u003e header (if present).\u003c/li\u003e\n\u003cli\u003eDomain of the \u003ci\u003eHost\u003c/i\u003e header.\u003c/li\u003e\n\u003c/ul\u003e",
+                "defaultValue": "auto",
+                "valueValidators": [
+                  {
+                    "type": "NON_EMPTY"
+                  }
+                ]
+              },
+              {
+                "type": "SELECT",
+                "name": "cookieSameSite",
+                "displayName": "Cookie SameSite",
+                "macrosInSelect": false,
+                "selectItems": [
+                  {
+                    "value": "none",
+                    "displayValue": "None"
+                  },
+                  {
+                    "value": "lax",
+                    "displayValue": "Lax"
+                  },
+                  {
+                    "value": "strict",
+                    "displayValue": "Strict"
+                  }
+                ],
+                "simpleValueType": true,
+                "help": "\u003ca href\u003d\"https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#samesitesamesite-value\"\u003eLearn more\u003c/a\u003e.",
+                "defaultValue": "lax"
+              },
+              {
+                "type": "SELECT",
+                "name": "cookieHttpOnly",
+                "displayName": "Cookie HTTP Only Flag",
+                "macrosInSelect": false,
+                "selectItems": [
+                  {
+                    "value": false,
+                    "displayValue": "false"
+                  },
+                  {
+                    "value": true,
+                    "displayValue": "true"
+                  }
+                ],
+                "simpleValueType": true,
+                "help": "Forbids JavaScript from accessing the cookie if \u003ci\u003etrue\u003c/i\u003e.",
+                "defaultValue": false
+              },
+              {
+                "type": "TEXT",
+                "name": "cookieExpiration",
+                "displayName": "Cookie Expiration",
+                "simpleValueType": true,
+                "valueUnit": "days",
+                "defaultValue": 730,
+                "valueValidators": [
+                  {
+                    "type": "NON_EMPTY"
+                  },
+                  {
+                    "type": "NON_NEGATIVE_NUMBER"
+                  }
+                ]
+              }
+            ],
+            "enablingConditions": [
+              {
+                "paramName": "storeEmail",
+                "paramValue": true,
+                "type": "EQUALS"
+              }
+            ]
+          }
+        ]
       },
       {
         "type": "CHECKBOX",
@@ -253,7 +342,7 @@ ___TEMPLATE_PARAMETERS___
         "name": "products",
         "displayName": "Products",
         "simpleValueType": true,
-        "help": "Required. Variable returning an array of products. Each product needs an ID, a price and a quantity. Both formats are accepted:\u003cbr\u003e\n\u003cul\u003e\n\u003cli\u003e\u003ca href\u003d\"https://developers.brevo.com/reference/create-order\"\u003eBrevo\u003c/a\u003e: \u003ci\u003eproductId\u003c/i\u003e, \u003ci\u003eprice\u003c/i\u003e, \u003ci\u003equantity\u003c/i\u003e or \u003ci\u003equantityFloat\u003c/i\u003e, \u003ci\u003evariantId\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003eGA4: \u003ci\u003eitem_id\u003c/i\u003e, \u003ci\u003eprice\u003c/i\u003e, \u003ci\u003equantity\u003c/i\u003e, \u003ci\u003eitem_variant\u003c/i\u003e\u003c/li\u003e\n\u003c/ul\u003e\nQuantity defaults to 1.\u003cbr/\u003e\u003cbr/\u003eWhen left empty and \u003ci\u003eAutomap from Event Data\u003c/i\u003e is enabled, falls back to the first of:\n\u003cul\u003e\n\u003cli\u003e\u003ci\u003eeventData.items\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003e\u003ci\u003eeventData.products\u003c/i\u003e\u003c/li\u003e\n\u003c/ul\u003e",
+        "help": "Required. Variable returning an array of products. Each product needs an ID, a price and a quantity. Both formats are accepted:\u003cbr\u003e\n\u003cul\u003e\n\u003cli\u003e\u003ca href\u003d\"https://developers.brevo.com/reference/create-order\"\u003eBrevo\u003c/a\u003e: \u003ci\u003eproductId\u003c/i\u003e, \u003ci\u003eprice\u003c/i\u003e, \u003ci\u003equantity\u003c/i\u003e or \u003ci\u003equantityFloat\u003c/i\u003e, \u003ci\u003evariantId\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003eGA4: \u003ci\u003eitem_id\u003c/i\u003e, \u003ci\u003eprice\u003c/i\u003e, \u003ci\u003equantity\u003c/i\u003e, \u003ci\u003eitem_variant\u003c/i\u003e\u003c/li\u003e\n\u003c/ul\u003e\nQuantity defaults to 1.\u003cbr/\u003e\u003cbr/\u003eWhen left empty and \u003ci\u003eAutomap from Event Data\u003c/i\u003e is enabled, falls back to the first of:\n\u003cul\u003e\n\u003cli\u003e\u003ci\u003eeventData.items\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003e\u003ci\u003eeventData.ecommerce.items\u003c/i\u003e\u003c/li\u003e\n\u003c/ul\u003e",
         "valueValidators": [
           {
             "type": "NON_EMPTY",
@@ -318,7 +407,12 @@ ___TEMPLATE_PARAMETERS___
             "displayName": "Name",
             "name": "name",
             "type": "TEXT",
-            "isUnique": true
+            "isUnique": true,
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
           },
           {
             "defaultValue": "",
@@ -346,7 +440,19 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "LABEL",
         "name": "customerIdentifiersGroupHelpText",
-        "displayName": "Only for v3. \u003cbr\u003e Identifies the contact associated with the event. At least one identifier is required, except for \u003ci\u003eCreate or Update Order\u003c/i\u003e, where identifiers are optional. Check \u003ci\u003eEmail\u003c/i\u003e field above. \u003cbr\u003e\u003cbr\u003e For \u003ci\u003eCreate or Update Order\u003c/i\u003e with \u003ci\u003eAutomap from Event Data\u003c/i\u003e enabled, identifiers left empty fall back to:\n\u003cul\u003e\n\u003cli\u003e\u003cb\u003eExternal ID\u003c/b\u003e: \u003ci\u003eeventData.user_id\u003c/i\u003e or \u003ci\u003eeventData.user_data.user_id\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003e\u003cb\u003ePhone Number\u003c/b\u003e: the first non-hashed, valid E.164 number (spaces, dashes, dots and parentheses removed, \u003ci\u003e+\u003c/i\u003e added if missing) of \u003ci\u003eeventData.phone\u003c/i\u003e, \u003ci\u003eeventData.phone_number\u003c/i\u003e, \u003ci\u003eeventData.user_data.phone_number\u003c/i\u003e or \u003ci\u003eeventData.user_data.phone\u003c/i\u003e\u003c/li\u003e\n\u003c/ul\u003e"
+        "displayName": "Identifies the contact associated with the event. At least one identifier is required, except for \u003ci\u003eCreate or Update Order\u003c/i\u003e, where identifiers are optional. Check \u003ci\u003eEmail\u003c/i\u003e field above."
+      },
+      {
+        "type": "LABEL",
+        "name": "customerIdentifiersForOrderGroupHelpText",
+        "displayName": "\u003cbr\u003e\nFor \u003ci\u003eCreate or Update Order\u003c/i\u003e with \u003ci\u003eAutomap from Event Data\u003c/i\u003e enabled, identifiers left empty fall back to:\n\u003cul\u003e\n\u003cli\u003e\u003cb\u003eExternal ID\u003c/b\u003e: \u003ci\u003eeventData.user_id\u003c/i\u003e or \u003ci\u003eeventData.user_data.user_id\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003e\u003cb\u003ePhone Number\u003c/b\u003e: the first non-hashed, valid E.164 number (spaces, dashes, dots and parentheses removed, \u003ci\u003e+\u003c/i\u003e added if missing) of \u003ci\u003eeventData.phone\u003c/i\u003e, \u003ci\u003eeventData.phone_number\u003c/i\u003e, \u003ci\u003eeventData.user_data.phone_number\u003c/i\u003e or \u003ci\u003eeventData.user_data.phone\u003c/i\u003e\u003c/li\u003e\n\u003c/ul\u003e",
+        "enablingConditions": [
+          {
+            "paramName": "type",
+            "paramValue": "trackOrder",
+            "type": "EQUALS"
+          }
+        ]
       },
       {
         "type": "SIMPLE_TABLE",
@@ -368,7 +474,12 @@ ___TEMPLATE_PARAMETERS___
                 "displayValue": "Phone Number"
               }
             ],
-            "macrosInSelect": false
+            "macrosInSelect": false,
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
           },
           {
             "defaultValue": "",
@@ -413,7 +524,12 @@ ___TEMPLATE_PARAMETERS___
             "displayName": "Name",
             "name": "name",
             "type": "TEXT",
-            "isUnique": true
+            "isUnique": true,
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
           },
           {
             "defaultValue": "",
@@ -448,7 +564,12 @@ ___TEMPLATE_PARAMETERS___
             "displayName": "Name",
             "name": "name",
             "type": "TEXT",
-            "isUnique": true
+            "isUnique": true,
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
           },
           {
             "defaultValue": "",
@@ -497,6 +618,8 @@ ___TEMPLATE_PARAMETERS___
 
 ___SANDBOXED_JS_FOR_SERVER___
 
+const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
+const createRegex = require('createRegex');
 const getAllEventData = require('getAllEventData');
 const getCookieValues = require('getCookieValues');
 const getRequestHeader = require('getRequestHeader');
@@ -504,6 +627,7 @@ const getTimestampMillis = require('getTimestampMillis');
 const getType = require('getType');
 const JSON = require('JSON');
 const logToConsole = require('logToConsole');
+const makeInteger = require('makeInteger');
 const makeNumber = require('makeNumber');
 const makeString = require('makeString');
 const makeTableMap = require('makeTableMap');
@@ -518,6 +642,8 @@ const eventData = getAllEventData();
 
 if (shouldExitEarly(data, eventData)) return;
 
+const PHONE_SEPARATORS_REGEX = createRegex('[\\s().-]', 'g');
+
 // Fallback to V2, which is the one being used in the Gallery when this change was made.
 const API_VERSION = data.type === 'trackOrder' ? 'v3' : data.apiVersion || 'v2';
 
@@ -527,39 +653,30 @@ if (data.storeEmail) {
   else storeCookie('email', email);
 }
 
-switch (data.type) {
-  case 'trackPage':
-    sendEvent('page_view', formatEventPayloadByApiVersion('trackPage'));
-    break;
-  case 'trackEvent':
-    sendEvent(data.event, formatEventPayloadByApiVersion('trackEvent'));
-    break;
-  case 'trackLink':
-    sendEvent('link', formatEventPayloadByApiVersion('trackLink'));
-    break;
-  case 'identify':
-    sendEvent('identify', formatEventPayloadByApiVersion('identify'));
-    break;
-  case 'trackOrder':
-    sendEvent('trackOrder', formatEventPayloadByApiVersion('trackOrder'));
-    break;
-  default:
-    return data.gtmOnFailure();
-}
+const eventNameByType = {
+  trackPage: 'page_view',
+  trackEvent: data.event,
+  trackLink: 'link',
+  identify: 'identify',
+  trackOrder: 'trackOrder'
+};
+if (!eventNameByType[data.type]) return data.gtmOnFailure();
+
+sendEvent(eventNameByType[data.type], getEventPayload(data.type, eventNameByType[data.type]));
 
 /*==============================================================================
   Vendor related functions
 ==============================================================================*/
 
 function sendEvent(eventName, brevoEventData) {
-  if (areThereRequiredFieldsMissing(brevoEventData)) {
+  const missingFields = getMissingFields(brevoEventData);
+  if (missingFields.length) {
     log({
       Name: 'Brevo',
       Type: 'Message',
       EventName: eventName,
       Message: '🛑 [ERROR] Request was not sent. API ' + API_VERSION,
-      Reason:
-        'One or more fields are missing or invalid: v2: Email; v3: Email, Phone Number or External ID; Order: ID, Amount, Status, Products, and Created At / Updated At.'
+      Reason: 'Missing or invalid required fields: ' + missingFields.join('; ')
     });
     return data.gtmOnFailure();
   }
@@ -586,113 +703,75 @@ function sendEvent(eventName, brevoEventData) {
   if (data.useOptimisticScenario) return data.gtmOnSuccess();
 }
 
-function formatEventPayloadByApiVersion(event) {
-  const eventPayloadByApiVersion = {
-    v2: {
-      trackPage: () => ({
-        properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-        email: email,
-        page: data.page
-      }),
-      trackEvent: () => ({
-        properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-        eventData: data.propertiesEvent ? makeTableMap(data.propertiesEvent, 'name', 'value') : {},
-        email: email,
-        event: data.event
-      }),
-      trackLink: () => ({
-        properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-        email: email,
-        link: data.link
-      }),
-      identify: () => ({
-        attributes: data.customerProperties
-          ? makeTableMap(data.customerProperties, 'name', 'value')
-          : {},
-        email: email
-      })
-    },
-    v3: {
-      trackPage: () => ({
-        event_name: 'page_view',
-        identifiers: mergeObj(
-          { email_id: email },
-          data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
-        ),
-        event_properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-        page: data.page
-      }),
-      trackEvent: () => ({
-        event_name: data.event,
-        identifiers: mergeObj(
-          { email_id: email },
-          data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
-        ),
-        contact_properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-        event_properties: data.propertiesEvent
-          ? makeTableMap(data.propertiesEvent, 'name', 'value')
-          : {}
-      }),
-      trackLink: () => ({
-        event_name: 'link',
-        identifiers: mergeObj(
-          { email_id: email },
-          data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
-        ),
-        event_properties: data.properties ? makeTableMap(data.properties, 'name', 'value') : {},
-        link: data.link
-      }),
-      identify: () => ({
-        event_name: 'identify',
-        identifiers: mergeObj(
-          { email_id: email },
-          data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
-        ),
-        contact_properties: data.customerProperties
-          ? makeTableMap(data.customerProperties, 'name', 'value')
-          : {}
-      }),
-      trackOrder: () => {
-        const orderPayload = mergeObj(
-          getRequiredOrderParams(data, eventData),
-          getOptionalOrderParams(data)
-        );
-        const identifiers = getUserDataIdentifiers(data, eventData);
-        const hasIdentifier = ['email_id', 'phone_id', 'ext_id'].some((p) =>
-          isValidValue(identifiers[p])
-        );
-        if (hasIdentifier) orderPayload.identifiers = identifiers;
-        return orderPayload;
-      }
-    }
-  };
+function getEventPayload(type, eventName) {
+  if (type === 'trackOrder') return getOrderPayload();
 
-  return eventPayloadByApiVersion[API_VERSION][event]();
+  const isV3 = API_VERSION === 'v3';
+  const properties = getTableMap(data.properties);
+  const payload = isV3
+    ? { event_name: eventName, identifiers: getCustomerIdentifiers() }
+    : { email: email };
+
+  switch (type) {
+    case 'trackPage':
+      payload[isV3 ? 'event_properties' : 'properties'] = properties;
+      payload.page = data.page;
+      break;
+    case 'trackEvent':
+      payload[isV3 ? 'contact_properties' : 'properties'] = properties;
+      payload[isV3 ? 'event_properties' : 'eventData'] = getTableMap(data.propertiesEvent);
+      if (!isV3) payload.event = data.event;
+      break;
+    case 'trackLink':
+      payload[isV3 ? 'event_properties' : 'properties'] = properties;
+      payload.link = data.link;
+      break;
+    case 'identify':
+      payload[isV3 ? 'contact_properties' : 'attributes'] = getTableMap(data.customerProperties);
+      break;
+  }
+
+  return payload;
 }
 
-function areThereRequiredFieldsMissing(brevoEventData) {
-  const requiredFieldsValidationByApiVersion = {
-    v2: () => {
-      if (!isValidValue(brevoEventData.email)) return true;
-      return false;
-    },
-    v3: () => {
-      if (data.type === 'trackOrder') {
-        const hasInvalidRequiredOrderParameter =
-          ['id', 'amount', 'status'].some((param) => !isValidValue(brevoEventData[param])) ||
-          ['createdAt', 'updatedAt'].some((date) => !isValidUTCDate(brevoEventData[date])) ||
-          areThereInvalidOrderProducts(brevoEventData.products);
-        return hasInvalidRequiredOrderParameter;
-      }
+function getOrderPayload() {
+  const orderPayload = mergeObj(
+    getRequiredOrderParams(data, eventData),
+    getOptionalOrderParams(data)
+  );
+  const identifiers = getUserDataIdentifiers(data, eventData);
+  const hasIdentifier = ['email_id', 'phone_id', 'ext_id'].some((p) =>
+    isValidValue(identifiers[p])
+  );
+  if (hasIdentifier) orderPayload.identifiers = identifiers;
+  return orderPayload;
+}
 
-      const doesNotHaveValidIdentifier = ['email_id', 'phone_id', 'ext_id'].every(
-        (p) => !isValidValue(brevoEventData.identifiers[p])
-      );
-      if (doesNotHaveValidIdentifier) return true;
-      return false;
-    }
-  };
-  return requiredFieldsValidationByApiVersion[API_VERSION]();
+function getCustomerIdentifiers() {
+  return mergeObj({ email_id: email }, getTableMap(data.customerIdentifiers));
+}
+
+function getMissingFields(brevoEventData) {
+  if (data.type === 'trackOrder') return getMissingOrderFields(brevoEventData);
+
+  if (API_VERSION === 'v2') return isValidValue(brevoEventData.email) ? [] : ['Email'];
+
+  const hasValidIdentifier = ['email_id', 'phone_id', 'ext_id'].some((p) =>
+    isValidValue(brevoEventData.identifiers[p])
+  );
+  return hasValidIdentifier ? [] : ['Email, Phone Number or External ID (at least one)'];
+}
+
+function getMissingOrderFields(order) {
+  const missingFields = [];
+  if (!isValidValue(order.id)) missingFields.push('Order ID');
+  if (!isValidValue(order.amount)) missingFields.push('Amount');
+  if (!isValidValue(order.status)) missingFields.push('Status');
+  if (!isValidUTCDate(order.createdAt))
+    missingFields.push('Created At (UTC date-time in the format YYYY-MM-DDTHH:mm:ssZ)');
+  if (!isValidUTCDate(order.updatedAt))
+    missingFields.push('Updated At (UTC date-time in the format YYYY-MM-DDTHH:mm:ssZ)');
+  return missingFields.concat(getInvalidOrderProductFields(order.products));
 }
 
 function getRequestUrl() {
@@ -719,61 +798,69 @@ function getRequestHeaders() {
 }
 
 function storeCookie(name, value) {
+  const defaultExpirationDays = 730; // 2 years
+  // makeInteger(undefined) returns 0, so a missing value (tags saved before this field existed)
+  // must fall back to the default explicitly, otherwise the cookie would expire immediately.
+  const expirationDays = isValidValue(data.cookieExpiration)
+    ? makeInteger(data.cookieExpiration)
+    : defaultExpirationDays;
   setCookie('brevo_' + name, value, {
-    domain: 'auto',
+    domain: getCookieDomain(data.cookieDomain),
     path: '/',
-    samesite: 'Lax',
+    samesite: data.cookieSameSite || 'Lax',
     secure: true,
-    'max-age': 63072000, // 2 years
-    httpOnly: false
+    'max-age': 60 * 60 * 24 * (expirationDays >= 0 ? expirationDays : defaultExpirationDays),
+    httpOnly: isUIFieldTrue(data.cookieHttpOnly)
   });
 }
 
 function getUserDataIdentifiers(data, eventData) {
-  const userIdentifiers = mergeObj(
-    { email: email },
-    data.customerIdentifiers ? makeTableMap(data.customerIdentifiers, 'name', 'value') : {}
-  );
+  const tableIdentifiers = getTableMap(data.customerIdentifiers);
   const userData = eventData.user_data || {};
   const autoMap = data.autoMapEventData;
+  // Priority: value set in the tag, then Event Data (automap), then the stored email cookie.
+  const emailFromEventData = autoMap
+    ? getFirstUnhashedValue([
+        eventData.email,
+        eventData.email_address,
+        userData.email,
+        userData.email_address
+      ])
+    : undefined;
+  const phoneFromEventData = autoMap
+    ? getFirstValidPhoneNumber([
+        eventData.phone,
+        eventData.phone_number,
+        userData.phone_number,
+        userData.phone
+      ])
+    : undefined;
   return {
-    email_id:
-      userIdentifiers.email ||
-      (autoMap
-        ? getFirstUnhashedValue([
-            eventData.email,
-            eventData.email_address,
-            userData.email,
-            userData.email_address
-          ])
-        : undefined),
-    ext_id: userIdentifiers.ext_id || (autoMap ? eventData.user_id || userData.user_id : undefined),
-    phone_id:
-      userIdentifiers.phone_id ||
-      (autoMap
-        ? getFirstValidPhoneNumber([
-            eventData.phone,
-            eventData.phone_number,
-            userData.phone_number,
-            userData.phone
-          ])
-        : undefined)
+    email_id: toStringIfValid(getFirstValidValue([data.email, emailFromEventData, email])),
+    ext_id: toStringIfValid(
+      getFirstValidValue([
+        tableIdentifiers.ext_id,
+        autoMap ? eventData.user_id : undefined,
+        autoMap ? userData.user_id : undefined
+      ])
+    ),
+    phone_id: toStringIfValid(getFirstValidValue([tableIdentifiers.phone_id, phoneFromEventData]))
   };
 }
 
 function getOrderProducts(data, eventData) {
-  const rawProducts =
-    data.products || (data.autoMapEventData ? eventData.items || eventData.products : []);
+  const rawProducts = data.products || (data.autoMapEventData ? getEventDataItems(eventData) : []);
   if (getType(rawProducts) !== 'array') return [];
 
   return rawProducts
     .filter((product) => getType(product) === 'object')
     .map((product) => {
-      const productId = product.productId || product.item_id;
-      const quantity = makeNumber(product.quantity || product.quantityFloat || 1);
+      const quantity = makeNumber(getFirstValidValue([product.quantity, product.quantityFloat, 1]));
       return {
-        productId: isValidValue(productId) ? makeString(productId) : undefined,
-        variantId: product.variantId || product.variant_id || product.item_variant,
+        productId: toStringIfValid(getFirstValidValue([product.productId, product.item_id])),
+        variantId: toStringIfValid(
+          getFirstValidValue([product.variantId, product.variant_id, product.item_variant])
+        ),
         price: makeNumber(isValidValue(product.price) ? product.price : product.item_price),
         quantity: !isFloatNumber(quantity) ? quantity : undefined,
         quantityFloat: isFloatNumber(quantity) ? quantity : undefined
@@ -781,18 +868,37 @@ function getOrderProducts(data, eventData) {
     });
 }
 
-function areThereInvalidOrderProducts(products) {
-  if (getType(products) !== 'array' || products.length === 0) return true;
-  return products.some(
-    (product) =>
-      !isValidValue(product.productId) ||
-      !isValidValue(product.price) ||
-      (!isValidValue(product.quantity) && !isValidValue(product.quantityFloat))
-  );
+function getEventDataItems(eventData) {
+  let items;
+  if (getType(eventData.items) === 'array' && eventData.items.length) items = eventData.items;
+  else if (
+    getType(eventData.ecommerce) === 'object' &&
+    getType(eventData.ecommerce.items) === 'array' &&
+    eventData.ecommerce.items.length
+  ) {
+    items = eventData.ecommerce.items;
+  }
+  return items;
+}
+
+function getInvalidOrderProductFields(products) {
+  if (getType(products) !== 'array' || products.length === 0) return ['Products'];
+
+  const invalidFields = [];
+  products.forEach((product, index) => {
+    const productInvalidFields = [];
+    if (!isValidValue(product.productId)) productInvalidFields.push('Product ID');
+    if (!isValidValue(product.price)) productInvalidFields.push('Price');
+    if (!isValidValue(product.quantity) && !isValidValue(product.quantityFloat))
+      productInvalidFields.push('Quantity');
+    if (productInvalidFields.length)
+      invalidFields.push('Products[' + index + '] ' + productInvalidFields.join(', '));
+  });
+  return invalidFields;
 }
 
 function getOptionalOrderParams(data) {
-  const properties = data.properties ? makeTableMap(data.properties, 'name', 'value') : {};
+  const properties = getTableMap(data.properties);
   const optionalOrderParams = {};
 
   if (getType(properties.billing) === 'object') optionalOrderParams.billing = properties.billing;
@@ -806,9 +912,12 @@ function getOptionalOrderParams(data) {
 
 function getRequiredOrderParams(data, eventData) {
   const now = convertTimestampToISO(getTimestampMillis());
+  const autoMap = data.autoMapEventData;
   const requiredParams = {
-    id: data.orderId || (data.autoMapEventData ? eventData.transaction_id : undefined),
-    amount: makeNumber(data.amount || (data.autoMapEventData ? eventData.value : undefined)),
+    id: toStringIfValid(
+      getFirstValidValue([data.orderId, autoMap ? eventData.transaction_id : undefined])
+    ),
+    amount: makeNumber(getFirstValidValue([data.amount, autoMap ? eventData.value : undefined])),
     status: data.status,
     products: getOrderProducts(data, eventData),
     createdAt: isValidValue(data.createdAt) ? data.createdAt : now,
@@ -829,6 +938,14 @@ function isValidUTCDate(date) {
   );
 }
 
+function getFirstValidValue(values) {
+  return values.filter(isValidValue)[0];
+}
+
+function toStringIfValid(value) {
+  return isValidValue(value) ? makeString(value) : undefined;
+}
+
 function getFirstUnhashedValue(values) {
   return values.filter((value) => isValidValue(value) && !isHashed(value))[0];
 }
@@ -838,17 +955,8 @@ function getFirstValidPhoneNumber(values) {
 }
 
 function normalizePhoneNumber(phoneNumber) {
-  phoneNumber = makeString(phoneNumber)
-    .split(' ')
-    .join('')
-    .split('-')
-    .join('')
-    .split('.')
-    .join('')
-    .split('(')
-    .join('')
-    .split(')')
-    .join('');
+  phoneNumber = makeString(phoneNumber);
+  if (PHONE_SEPARATORS_REGEX) phoneNumber = phoneNumber.replace(PHONE_SEPARATORS_REGEX, '');
   if (isHashed(phoneNumber)) return;
   if (phoneNumber[0] !== '+') phoneNumber = '+' + phoneNumber;
   if (phoneNumber.match('^\\+[1-9][0-9]{1,14}$') === null) return;
@@ -952,7 +1060,22 @@ function shouldExitEarly(data, eventData) {
 
 function isValidValue(value) {
   const valueType = getType(value);
-  return valueType !== 'null' && valueType !== 'undefined' && value !== '' && value === value;
+  if (valueType === 'null' || valueType === 'undefined' || value !== value) return false;
+  return value !== '' && value !== 'undefined' && value !== 'null';
+}
+
+function getTableMap(table) {
+  return table ? makeTableMap(table, 'name', 'value') : {};
+}
+
+function getCookieDomain(cookieDomain) {
+  return !cookieDomain || cookieDomain === 'auto'
+    ? computeEffectiveTldPlusOne(eventData.page_location || getRequestHeader('referer')) || 'auto'
+    : cookieDomain;
+}
+
+function isUIFieldTrue(field) {
+  return [true, 'true'].indexOf(field) !== -1;
 }
 
 function mergeObj(target, source) {
@@ -1281,7 +1404,9 @@ scenarios:
         mockData[key] = scenario.extraMockData[key];
       }
 
+      let requestSent = false;
       mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
         const bodyParsed = JSON.parse(body);
         assertThat(url).isEqualTo('https://in-automate.brevo.com/api/v2/' + scenario.type);
         assertThat(options.method).isEqualTo('POST');
@@ -1298,6 +1423,7 @@ scenarios:
 
       runCode(mockData);
 
+      assertThat(requestSent).isTrue();
       assertApi('sendHttpRequest').wasCalled();
       assertApi('gtmOnSuccess').wasCalled();
       assertApi('gtmOnFailure').wasNotCalled();
@@ -1342,7 +1468,9 @@ scenarios:
         mockData[key] = scenario.extraMockData[key];
       }
 
+      let requestSent = false;
       mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
         const bodyParsed = JSON.parse(body);
         assertThat(url).isEqualTo('https://api.brevo.com/v3/events');
         assertThat(options.method).isEqualTo('POST');
@@ -1359,33 +1487,33 @@ scenarios:
 
       runCode(mockData);
 
+      assertThat(requestSent).isTrue();
       assertApi('sendHttpRequest').wasCalled();
       assertApi('gtmOnSuccess').wasCalled();
       assertApi('gtmOnFailure').wasNotCalled();
     });
 - name: '[Cookie] Saves email in cookie when storeEmail is enabled and email is provided'
   code: |-
-    const expectedValue = 'test';
-
     [
-      { apiVersion: 'v2', type: 'trackPage', page: expectedValue },
-      { apiVersion: 'v3', type: 'trackPage', page: expectedValue }
+      { apiVersion: 'v2', email: 'v2@example.com' },
+      { apiVersion: 'v3', email: 'v3@example.com' }
     ].forEach((scenario) => {
       mockData.apiVersion = scenario.apiVersion;
-      mockData.type = scenario.type;
-      mockData.page = scenario.page;
+      mockData.type = 'trackPage';
+      mockData.page = 'test';
       mockData.storeEmail = true;
-      mockData.email = expectedValue;
+      mockData.email = scenario.email;
 
       runCode(mockData);
 
-      assertApi('setCookie').wasCalledWith('brevo_email', expectedValue, {
-        domain: 'auto',
+      // Default settings: domain resolved from page_location, Lax, secure, 2 years, not HttpOnly
+      assertApi('setCookie').wasCalledWith('brevo_email', scenario.email, {
+        domain: 'example.com',
         path: '/',
         samesite: 'Lax',
         secure: true,
         'max-age': 63072000,
-        httpOnly: false,
+        httpOnly: false
       });
       assertApi('gtmOnSuccess').wasCalled();
       assertApi('gtmOnFailure').wasNotCalled();
@@ -1433,13 +1561,16 @@ scenarios:
 - name: '[Required Fields] Request is not sent when required identifiers are missing'
   code: |-
     [
-      { apiVersion: 'v2', description: 'V2 without email' },
-      { apiVersion: 'v3', description: 'V3 without any identifier' }
+      { apiVersion: 'v2', email: undefined, description: 'V2 without email' },
+      { apiVersion: 'v2', email: '', description: 'V2 with empty email' },
+      { apiVersion: 'v2', email: 'undefined', description: 'V2 with the string undefined as email' },
+      { apiVersion: 'v3', email: undefined, description: 'V3 without any identifier' },
+      { apiVersion: 'v3', email: 'null', description: 'V3 with the string null as email' }
     ].forEach((scenario) => {
       mockData.apiVersion = scenario.apiVersion;
       mockData.type = 'trackPage';
       mockData.page = 'test';
-      mockData.email = undefined;
+      mockData.email = scenario.email;
 
       runCode(mockData);
 
@@ -1583,6 +1714,20 @@ scenarios:
     assertApi('gtmOnSuccess').wasNotCalled();
     assertApi('gtmOnFailure').wasCalled();
     assertApi('sendHttpRequest').wasNotCalled();
+- name: '[Default Type] Calls gtmOnFailure for Track event without an event name'
+  code: |-
+    ['', undefined].forEach((eventName) => {
+      mockData.apiVersion = 'v3';
+      mockData.type = 'trackEvent';
+      mockData.event = eventName;
+      mockData.email = 'test@example.com';
+
+      runCode(mockData);
+
+      assertApi('sendHttpRequest').wasNotCalled();
+      assertApi('gtmOnSuccess').wasNotCalled();
+      assertApi('gtmOnFailure').wasCalled();
+    });
 - name: '[API Version] Defaults to v2 when apiVersion is not specified'
   code: |-
     mockData.apiVersion = undefined;
@@ -1622,7 +1767,7 @@ scenarios:
     });
 - name: '[Response] Calls gtmOnFailure on non-2xx response without optimistic scenario'
   code: |-
-    [400, 401, 500].forEach((statusCode) => {
+    [400, 401, 500, -1].forEach((statusCode) => {
       mockData.apiVersion = 'v2';
       mockData.type = 'trackPage';
       mockData.page = 'test';
@@ -1759,19 +1904,25 @@ scenarios:
       { eventData: { email_address: 'c@example.com' }, expectedIdentifiers: { email_id: 'c@example.com' } },
       { eventData: { phone: '+111' }, expectedIdentifiers: { phone_id: '+111' } },
       { eventData: { user_data: { phone: '+222' } }, expectedIdentifiers: { phone_id: '+222' } },
-      { eventData: { user_data: { user_id: 'ext-2' } }, expectedIdentifiers: { ext_id: 'ext-2' } }
+      { eventData: { user_data: { user_id: 'ext-2' } }, expectedIdentifiers: { ext_id: 'ext-2' } },
+      { eventData: { phone: '+1 555 000 1111 ext 5' }, expectedIdentifiers: undefined },
+      { eventData: { phone: '+1234567890123456' }, expectedIdentifiers: undefined },
+      { eventData: { phone: '+0 555 000 1111' }, expectedIdentifiers: undefined }
     ].forEach((scenario) => {
       const testData = createOrderMockData({ autoMapEventData: true, email: '' });
 
       mock('getAllEventData', () => scenario.eventData);
 
+      let requestSent = false;
       mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
         assertThat(JSON.parse(body).identifiers).isEqualTo(scenario.expectedIdentifiers);
         callback(204, {}, '');
       });
 
       runCode(testData);
 
+      assertThat(requestSent).isTrue();
       assertApi('sendHttpRequest').wasCalled();
       assertApi('gtmOnSuccess').wasCalled();
       assertApi('gtmOnFailure').wasNotCalled();
@@ -1900,7 +2051,9 @@ scenarios:
 
       mock('getTimestampMillis', scenario.timestamp);
 
+      let requestSent = false;
       mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
         const bodyParsed = JSON.parse(body);
         assertThat(bodyParsed.createdAt).isEqualTo(scenario.expectedCreatedAt);
         assertThat(bodyParsed.updatedAt).isEqualTo(scenario.expectedUpdatedAt);
@@ -1909,6 +2062,7 @@ scenarios:
 
       runCode(testData);
 
+      assertThat(requestSent).isTrue();
       assertApi('sendHttpRequest').wasCalled();
       assertApi('gtmOnSuccess').wasCalled();
       assertApi('gtmOnFailure').wasNotCalled();
@@ -1917,6 +2071,16 @@ scenarios:
   code: |-
     [
       { description: 'No identifiers set', overrides: { email: '' }, eventData: {} },
+      {
+        description: 'Automap disabled ignores identifiers in Event Data',
+        overrides: { email: '', autoMapEventData: false },
+        eventData: {
+          email: 'e@example.com',
+          user_id: 'user-1',
+          phone: '+15550001111',
+          user_data: { email: 'u@example.com' }
+        }
+      },
       {
         description: 'Automap enabled without identifiers in Event Data',
         overrides: { email: '', autoMapEventData: true },
@@ -1927,7 +2091,9 @@ scenarios:
 
       mock('getAllEventData', () => scenario.eventData);
 
+      let requestSent = false;
       mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
         const bodyParsed = JSON.parse(body);
         assertThat(bodyParsed.identifiers).isUndefined();
         assertThat(bodyParsed.id).isEqualTo('order-1');
@@ -1936,6 +2102,7 @@ scenarios:
 
       runCode(testData);
 
+      assertThat(requestSent).isTrue();
       assertApi('sendHttpRequest').wasCalled();
       assertApi('gtmOnSuccess').wasCalled();
       assertApi('gtmOnFailure').wasNotCalled();
@@ -1994,7 +2161,9 @@ scenarios:
         properties: [{ name: property.name, value: property.value }]
       });
 
+      let requestSent = false;
       mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
         const sentValue = JSON.parse(body)[property.name];
         if (property.expected === undefined) assertThat(sentValue).isUndefined();
         else assertThat(sentValue).isEqualTo(property.expected);
@@ -2003,6 +2172,7 @@ scenarios:
 
       runCode(testData);
 
+      assertThat(requestSent).isTrue();
       assertApi('sendHttpRequest').wasCalled();
       assertApi('gtmOnSuccess').wasCalled();
       assertApi('gtmOnFailure').wasNotCalled();
@@ -2019,6 +2189,8 @@ scenarios:
       { description: 'Updated At with a timezone offset', overrides: { updatedAt: '2025-05-22T22:30:30+02:00' } },
       { description: 'Updated At as a date only', overrides: { updatedAt: '2025-05-22' } },
       { description: 'Created At as a Unix timestamp', overrides: { createdAt: 1747945830 } },
+      { description: 'Created At with text before the date', overrides: { createdAt: 'x2025-01-01T10:00:00Z' } },
+      { description: 'Updated At with text after the date', overrides: { updatedAt: '2025-01-01T10:00:00Zx' } },
       { description: 'Empty products', overrides: { products: [] } },
       { description: 'Products is not an array', overrides: { products: '[{"productId":"a"}]' } },
       { description: 'Only invalid product entries', overrides: { products: [null, 'x'] } },
@@ -2026,6 +2198,31 @@ scenarios:
       { description: 'Product with non-numeric price', overrides: { products: [{ productId: 'a', price: 'abc' }] } },
       { description: 'Product without price', overrides: { products: [{ productId: 'a', quantity: 1 }] } },
       { description: 'Product with non-numeric quantity', overrides: { products: [{ productId: 'a', price: 1, quantity: 'abc' }] } },
+      {
+        description: 'Automap disabled ignores transaction_id',
+        overrides: { autoMapEventData: false, orderId: '' },
+        eventData: { transaction_id: 'T-1' }
+      },
+      {
+        description: 'Automap disabled ignores value',
+        overrides: { autoMapEventData: false, amount: '' },
+        eventData: { value: 10 }
+      },
+      {
+        description: 'Automap disabled ignores items',
+        overrides: { autoMapEventData: false, products: '' },
+        eventData: { items: [{ item_id: 'a', price: 10 }] }
+      },
+      {
+        description: 'Automap ignores products in Event Data',
+        overrides: { autoMapEventData: true, products: '' },
+        eventData: { products: [{ item_id: 'a', price: 10 }] }
+      },
+      {
+        description: 'Automap ignores ecommerce items that are not an array',
+        overrides: { autoMapEventData: true, products: '' },
+        eventData: { ecommerce: { items: 'a' } }
+      },
       {
         description: 'Automap disabled ignores Event Data',
         overrides: { autoMapEventData: false, orderId: '', amount: '', products: '' },
@@ -2048,19 +2245,459 @@ scenarios:
     [200, 201, 400].forEach((statusCode) => {
       const testData = createOrderMockData({ useOptimisticScenario: false });
 
+      let requestSent = false;
       mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
         callback(statusCode, {}, '');
       });
 
       runCode(testData);
 
+      assertThat(requestSent).isTrue();
       assertApi('sendHttpRequest').wasCalled();
       assertApi('gtmOnSuccess').wasNotCalled();
       assertApi('gtmOnFailure').wasCalled();
     });
+- name: '[Cookie] Uses the configured cookie settings'
+  code: |-
+    [
+      {
+        settings: { cookieDomain: 'custom.com', cookieSameSite: 'strict', cookieHttpOnly: true, cookieExpiration: '30' },
+        expected: { domain: 'custom.com', samesite: 'strict', httpOnly: true, 'max-age': 2592000 }
+      },
+      {
+        settings: { cookieDomain: 'auto', cookieSameSite: 'none', cookieHttpOnly: 'true', cookieExpiration: 1 },
+        expected: { domain: 'example.com', samesite: 'none', httpOnly: true, 'max-age': 86400 }
+      },
+      {
+        settings: { cookieDomain: '', cookieSameSite: 'lax', cookieHttpOnly: 'false', cookieExpiration: 730 },
+        expected: { domain: 'example.com', samesite: 'lax', httpOnly: false, 'max-age': 63072000 }
+      },
+      {
+        settings: { cookieDomain: 'missing-days.com' },
+        expected: { domain: 'missing-days.com', samesite: 'Lax', httpOnly: false, 'max-age': 63072000 }
+      },
+      {
+        settings: { cookieDomain: 'empty-days.com', cookieExpiration: '' },
+        expected: { domain: 'empty-days.com', samesite: 'Lax', httpOnly: false, 'max-age': 63072000 }
+      },
+      {
+        settings: { cookieDomain: 'negative.com', cookieExpiration: '-5' },
+        expected: { domain: 'negative.com', samesite: 'Lax', httpOnly: false, 'max-age': 63072000 }
+      }
+    ].forEach((scenario) => {
+      const testData = createEventMockData(scenario.settings);
+      testData.storeEmail = true;
+
+      runCode(testData);
+
+      assertApi('setCookie').wasCalledWith('brevo_email', 'test@example.com', {
+        domain: scenario.expected.domain,
+        path: '/',
+        samesite: scenario.expected.samesite,
+        secure: true,
+        'max-age': scenario.expected['max-age'],
+        httpOnly: scenario.expected.httpOnly
+      });
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[Cookie] Resolves the cookie domain automatically from page_location or referer'
+  code: |-
+    [
+      { eventData: { page_location: 'https://www.shop.example.com/cart' }, referer: undefined, expectedDomain: 'example.com' },
+      { eventData: { page_location: 'https://www.shop.example.net/cart' }, referer: 'https://other.org/', expectedDomain: 'example.net' },
+      { eventData: {}, referer: 'https://blog.example.org/post', expectedDomain: 'example.org' },
+      { eventData: {}, referer: undefined, expectedDomain: 'auto' }
+    ].forEach((scenario) => {
+      const testData = createEventMockData({ cookieDomain: 'auto' });
+      testData.storeEmail = true;
+
+      mock('getAllEventData', () => scenario.eventData);
+      mock('getRequestHeader', (header) => {
+        if (header === 'referer') return scenario.referer;
+      });
+
+      runCode(testData);
+
+      assertApi('setCookie').wasCalledWith('brevo_email', 'test@example.com', {
+        domain: scenario.expectedDomain,
+        path: '/',
+        samesite: 'Lax',
+        secure: true,
+        'max-age': 63072000,
+        httpOnly: false
+      });
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[Cookie] Does not set the cookie when storeEmail is disabled or the email
+    comes from the cookie'
+  code: |-
+    [
+      { storeEmail: false, email: 'test@example.com' },
+      { storeEmail: true, email: '' }
+    ].forEach((scenario) => {
+      const testData = createEventMockData({ email: scenario.email });
+      testData.storeEmail = scenario.storeEmail;
+
+      mock('getCookieValues', ['cookie@example.com']);
+
+      runCode(testData);
+
+      assertApi('setCookie').wasNotCalled();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[Payload] Only includes the keys of the selected API version'
+  code: |-
+    const expectedKeys = {
+      v2: {
+        trackPage: ['properties', 'email', 'page'],
+        trackEvent: ['properties', 'eventData', 'email', 'event'],
+        trackLink: ['properties', 'email', 'link'],
+        identify: ['attributes', 'email']
+      },
+      v3: {
+        trackPage: ['event_name', 'identifiers', 'event_properties', 'page'],
+        trackEvent: ['event_name', 'identifiers', 'contact_properties', 'event_properties'],
+        trackLink: ['event_name', 'identifiers', 'event_properties', 'link'],
+        identify: ['event_name', 'identifiers', 'contact_properties']
+      }
+    };
+
+    ['v2', 'v3'].forEach((apiVersion) => {
+      ['trackPage', 'trackEvent', 'trackLink', 'identify'].forEach((type) => {
+        mockData.apiVersion = apiVersion;
+        mockData.type = type;
+        mockData.email = 'test@example.com';
+        mockData.page = 'test';
+        mockData.event = 'test';
+        mockData.link = 'test';
+
+        let requestSent = false;
+        mock('sendHttpRequest', (url, callback, options, body) => {
+          requestSent = true;
+          assertThat(Object.keys(JSON.parse(body)).sort()).isEqualTo(expectedKeys[apiVersion][type].sort());
+          callback(200, {}, '');
+        });
+
+        runCode(mockData);
+
+        assertThat(requestSent).isTrue();
+        assertApi('sendHttpRequest').wasCalled();
+        assertApi('gtmOnSuccess').wasCalled();
+        assertApi('gtmOnFailure').wasNotCalled();
+      });
+    });
+- name: '[Payload] Tables left empty are sent as empty objects'
+  code: |-
+    [
+      {
+        apiVersion: 'v2',
+        type: 'trackEvent',
+        expectedBody: { properties: {}, eventData: {}, email: 'test@example.com', event: 'test' }
+      },
+      {
+        apiVersion: 'v2',
+        type: 'identify',
+        expectedBody: { attributes: {}, email: 'test@example.com' }
+      },
+      {
+        apiVersion: 'v3',
+        type: 'trackEvent',
+        expectedBody: {
+          event_name: 'test',
+          identifiers: { email_id: 'test@example.com' },
+          contact_properties: {},
+          event_properties: {}
+        }
+      },
+      {
+        apiVersion: 'v3',
+        type: 'identify',
+        expectedBody: {
+          event_name: 'identify',
+          identifiers: { email_id: 'test@example.com' },
+          contact_properties: {}
+        }
+      }
+    ].forEach((scenario) => {
+      mockData.apiVersion = scenario.apiVersion;
+      mockData.type = scenario.type;
+      mockData.email = 'test@example.com';
+      mockData.event = 'test';
+
+      let requestSent = false;
+      mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
+        assertThat(JSON.parse(body)).isEqualTo(scenario.expectedBody);
+        callback(200, {}, '');
+      });
+
+      runCode(mockData);
+
+      assertThat(requestSent).isTrue();
+      assertApi('sendHttpRequest').wasCalled();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[Order] Automaps products from Event Data items, falling back to ecommerce
+    items'
+  code: |-
+    const eventDataItems = [{ item_id: 'top', price: 1, quantity: 1 }];
+    const ecommerceItems = [{ item_id: 'nested', price: 2, quantity: 3 }];
+
+    [
+      {
+        eventData: { items: eventDataItems, ecommerce: { items: ecommerceItems } },
+        expectedProducts: [{ productId: 'top', price: 1, quantity: 1 }]
+      },
+      {
+        eventData: { items: [], ecommerce: { items: ecommerceItems } },
+        expectedProducts: [{ productId: 'nested', price: 2, quantity: 3 }]
+      },
+      {
+        eventData: { ecommerce: { items: ecommerceItems } },
+        expectedProducts: [{ productId: 'nested', price: 2, quantity: 3 }]
+      },
+      {
+        eventData: { items: 'not-an-array', ecommerce: { items: ecommerceItems } },
+        expectedProducts: [{ productId: 'nested', price: 2, quantity: 3 }]
+      }
+    ].forEach((scenario) => {
+      const testData = createOrderMockData({ autoMapEventData: true, products: '' });
+
+      mock('getAllEventData', () => scenario.eventData);
+
+      let requestSent = false;
+      mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
+        assertThat(JSON.parse(body).products).isEqualTo(scenario.expectedProducts);
+        callback(204, {}, '');
+      });
+
+      runCode(testData);
+
+      assertThat(requestSent).isTrue();
+      assertApi('sendHttpRequest').wasCalled();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[V3] Sends events identified only by external ID or phone number'
+  code: |-
+    [
+      { identifiers: [{ name: 'ext_id', value: 'ext-1' }], expected: { ext_id: 'ext-1' } },
+      { identifiers: [{ name: 'phone_id', value: '+15550001111' }], expected: { phone_id: '+15550001111' } }
+    ].forEach((scenario) => {
+      mockData.apiVersion = 'v3';
+      mockData.type = 'trackPage';
+      mockData.page = 'test';
+      mockData.email = undefined;
+      mockData.customerIdentifiers = scenario.identifiers;
+
+      let requestSent = false;
+      mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
+        assertThat(JSON.parse(body).identifiers).isEqualTo(scenario.expected);
+        callback(200, {}, '');
+      });
+
+      runCode(mockData);
+
+      assertThat(requestSent).isTrue();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[Optimistic] Calls gtmOnFailure without sending when required fields are
+    missing'
+  code: |-
+    mockData.apiVersion = 'v2';
+    mockData.type = 'trackPage';
+    mockData.page = 'test';
+    mockData.email = undefined;
+    mockData.useOptimisticScenario = true;
+
+    runCode(mockData);
+
+    assertApi('sendHttpRequest').wasNotCalled();
+    assertApi('gtmOnSuccess').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+- name: '[Early Exit] Calls gtmOnSuccess and stops when the preview URL comes from
+    referer or page_referrer'
+  code: |-
+    [
+      { eventData: {}, referer: 'https://gtm-msr.appspot.com/collect' },
+      { eventData: { page_referrer: 'https://gtm-msr.appspot.com/collect' }, referer: undefined }
+    ].forEach((scenario) => {
+      mockData.apiVersion = 'v2';
+      mockData.type = 'trackPage';
+      mockData.page = 'test';
+      mockData.email = 'test@example.com';
+
+      mock('getAllEventData', () => scenario.eventData);
+      mock('getRequestHeader', (header) => {
+        if (header === 'referer') return scenario.referer;
+      });
+
+      runCode(mockData);
+
+      assertApi('sendHttpRequest').wasNotCalled();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[Cookie] Saves the email in cookie for orders too'
+  code: |-
+    const testData = createOrderMockData({ storeEmail: true, cookieDomain: 'orders.com' });
+
+    mock('sendHttpRequest', (url, callback, options, body) => {
+      callback(204, {}, '');
+    });
+
+    runCode(testData);
+
+    assertApi('setCookie').wasCalledWith('brevo_email', 'test@example.com', {
+      domain: 'orders.com',
+      path: '/',
+      samesite: 'Lax',
+      secure: true,
+      'max-age': 63072000,
+      httpOnly: false
+    });
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: '[Order] Event Data email takes precedence over the stored email cookie'
+  code: |-
+    [
+      { eventData: { user_data: { email: 'new@example.com' } }, expectedEmail: 'new@example.com' },
+      { eventData: { user_data: {} }, expectedEmail: 'cookie@example.com' }
+    ].forEach((scenario) => {
+      const testData = createOrderMockData({ email: '', storeEmail: true, autoMapEventData: true });
+
+      mock('getCookieValues', ['cookie@example.com']);
+      mock('getAllEventData', () => scenario.eventData);
+
+      let requestSent = false;
+      mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
+        assertThat(JSON.parse(body).identifiers).isEqualTo({ email_id: scenario.expectedEmail });
+        callback(204, {}, '');
+      });
+
+      runCode(testData);
+
+      assertThat(requestSent).isTrue();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[Order] Accepts zero as order ID, amount, price and quantity'
+  code: |-
+    [
+      {
+        overrides: { orderId: 0, amount: 0, products: [{ productId: 'p1', price: 0, quantity: 0 }] },
+        eventData: {},
+        expectedBody: { id: '0', amount: 0, products: [{ productId: 'p1', price: 0, quantity: 0 }] }
+      },
+      {
+        overrides: { autoMapEventData: true, orderId: 0, amount: 0 },
+        eventData: { transaction_id: 'T-9', value: 50 },
+        expectedBody: {
+          id: '0',
+          amount: 0,
+          products: [{ productId: 'sku1', variantId: 'red', price: 10, quantity: 2 }]
+        }
+      },
+      {
+        overrides: { autoMapEventData: true, orderId: '', amount: '' },
+        eventData: { transaction_id: 'T-10', value: 0 },
+        expectedBody: {
+          id: 'T-10',
+          amount: 0,
+          products: [{ productId: 'sku1', variantId: 'red', price: 10, quantity: 2 }]
+        }
+      }
+    ].forEach((scenario) => {
+      const testData = createOrderMockData(scenario.overrides);
+
+      mock('getAllEventData', () => scenario.eventData);
+
+      let requestSent = false;
+      mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
+        const bodyParsed = JSON.parse(body);
+        assertThat(bodyParsed.id).isEqualTo(scenario.expectedBody.id);
+        assertThat(bodyParsed.amount).isEqualTo(scenario.expectedBody.amount);
+        assertThat(bodyParsed.products).isEqualTo(scenario.expectedBody.products);
+        callback(204, {}, '');
+      });
+
+      runCode(testData);
+
+      assertThat(requestSent).isTrue();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
+- name: '[Order] Sends order ID, product IDs and identifiers as strings'
+  code: |-
+    [
+      {
+        overrides: { autoMapEventData: true, email: '', orderId: '', amount: '', products: '' },
+        eventData: {
+          transaction_id: 12345,
+          value: 1,
+          user_id: 99,
+          items: [{ item_id: 7, price: 1, quantity: 1, item_variant: 77 }]
+        },
+        expectedId: '12345',
+        expectedIdentifiers: { ext_id: '99' },
+        expectedProducts: [{ productId: '7', variantId: '77', price: 1, quantity: 1 }]
+      },
+      {
+        overrides: {
+          orderId: 555,
+          customerIdentifiers: [
+            { name: 'ext_id', value: 42 },
+            { name: 'phone_id', value: 351912345678 }
+          ],
+          products: [{ productId: 1, variantId: 2, price: 3, quantity: 1 }]
+        },
+        eventData: {},
+        expectedId: '555',
+        expectedIdentifiers: { email_id: 'test@example.com', ext_id: '42', phone_id: '351912345678' },
+        expectedProducts: [{ productId: '1', variantId: '2', price: 3, quantity: 1 }]
+      }
+    ].forEach((scenario) => {
+      const testData = createOrderMockData(scenario.overrides);
+
+      mock('getAllEventData', () => scenario.eventData);
+
+      let requestSent = false;
+      mock('sendHttpRequest', (url, callback, options, body) => {
+        requestSent = true;
+        const bodyParsed = JSON.parse(body);
+        assertThat(bodyParsed.id).isEqualTo(scenario.expectedId);
+        assertThat(bodyParsed.identifiers).isEqualTo(scenario.expectedIdentifiers);
+        assertThat(bodyParsed.products).isEqualTo(scenario.expectedProducts);
+        callback(204, {}, '');
+      });
+
+      runCode(testData);
+
+      assertThat(requestSent).isTrue();
+      assertApi('gtmOnSuccess').wasCalled();
+      assertApi('gtmOnFailure').wasNotCalled();
+    });
 setup: |-
   const JSON = require('JSON');
+  const Object = require('Object');
   const makeTableMap = require('makeTableMap');
+
+  // Simplified eTLD+1: keeps the last two labels of the host
+  mock('computeEffectiveTldPlusOne', (url) => {
+    if (!url) return url;
+    const host = url.split('://').pop().split('/')[0];
+    return host.split('.').slice(-2).join('.');
+  });
 
   // Default: container is NOT in debug/preview mode
   mock('getContainerVersion', () => ({ debugMode: false, previewMode: false }));
@@ -2088,6 +2725,18 @@ setup: |-
     logType: 'always'
   };
 
+  const createEventMockData = (overrides) => {
+    const eventMockData = {
+      clientKey: '123',
+      apiVersion: 'v2',
+      type: 'trackPage',
+      page: 'test',
+      email: 'test@example.com'
+    };
+    for (const key in overrides) eventMockData[key] = overrides[key];
+    return eventMockData;
+  };
+
   const createOrderMockData = (overrides) => {
     const orderMockData = {
       clientKey: '123',
@@ -2108,22 +2757,15 @@ setup: |-
 ___NOTES___
 
 2026-10-09 - Change Notes:
-  - Add "Create or Update Order" type that sends orders to Brevo's v3 Orders API (/v3/orders/status), always using v3 regardless of the selected API version
-  - Add Order Data fields (Order ID, Amount, Products, Status, Created At, Updated At), shown only for the order type; empty Created At and Updated At fall back to the current UTC time, while a value not in YYYY-MM-DDTHH:mm:ssZ format fails the tag instead of being silently replaced
-  - Add "Automap from Event Data" option (enabled by default) that fills empty order fields (transaction_id, value, items) and customer identifiers (email, user ID, phone) from event data, with values set in the tag taking precedence; Order ID, Amount and Products are required in the UI only when it is disabled
-  - Skip hashed (SHA-256) values for the automapped email and phone, and normalize the automapped phone to E.164, skipping invalid numbers, so Brevo receives identifiers it can match to a contact
-  - Accept products in Brevo or GA4 format, converting IDs to strings, prices and quantities to numbers, using quantityFloat for fractional quantities, defaulting quantity to 1 and skipping non-object entries
-  - Validate required order fields and each product's ID, price and quantity before sending, so invalid orders are stopped with a logged reason instead of being rejected by Brevo
-  - Report orders as successful only on a 204 response, the only success status the Orders API documents; other types keep accepting any 2xx
-  - Allow anonymous orders: customer identifiers are optional for orders, as in the Brevo API, and are only sent when at least one is set
-  - Add optional order fields through the Properties table: billing and metaInfo (objects) and coupons (array) are sent when they have the right type, and storeId is sent as a string; other names are ignored so they can't override required fields
-  - Show Customer Identifiers for orders, as the API Version field is hidden for them
-  - Add unit tests for order payloads, automapping (including hashed-value skipping and phone normalization), precedence of tag values, anonymous orders, optional order fields, product normalization, date handling, validation and response handling
+  - Add "Create or Update Order" type (v3 only) that sends orders to Brevo's Orders API, with Order Data fields, optional billing, coupons, metaInfo and storeId through the Properties table, and optional customer identifiers; invalid required fields stop the request and only a 204 response counts as success
+  - Add "Automap from Event Data" (enabled by default) that fills empty order fields and customer identifiers from event data (items or ecommerce.items for products), skipping hashed email and phone values and normalizing phone numbers
+  - Add Cookie Settings (domain, SameSite, HttpOnly and expiration) for the stored email cookie. Defaults keep the previous values, but the domain "auto" now resolves from page_location or the Referer header first
+  - Log exactly which required fields are missing or invalid, treat the strings "undefined" and "null" as empty values, and fail Track event without an event name before sending
+  - Share the payload logic between API v2 and v3, and add unit tests
 
 2026-05-25 Change Notes:
  - Logging removal.
 
 
 Created on 28/07/2023, 15:15:15
-
 
