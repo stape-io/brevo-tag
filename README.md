@@ -10,6 +10,8 @@ The Brevo tag for the server Google Tag Manager (sGTM) container enables seamles
 
 **Identify the user** - allows the system to recognize and differentiate individual users who interact with the website. It can be based on a unique identifier, such as a user ID or a cookie.
 
+**Create or Update Order (v3 only)** - creates an order or updates its status in Brevo using the [Orders API](https://developers.brevo.com/reference/create-order). Always uses API v3, regardless of the selected API version. With **Automap from Event Data** enabled (default), empty order fields and customer identifiers fall back to Event Data values.
+
 **Client Key** - retrieve your Client Key based on the API version you are using:
   - API v2: https://developers.brevo.com/docs/tracker-rest-implementation#authentication
   - API v3: https://developers.brevo.com/docs/getting-started#using-your-api-key-to-authenticate
@@ -17,6 +19,8 @@ The Brevo tag for the server Google Tag Manager (sGTM) container enables seamles
 **Email** - email to identify the user.
 
 **Page** - the name of the page being tracked (e.g., `"Checkout"`).
+
+**Store email in cookies** - persists the email in the `brevo_email` cookie as a fallback for events without one. The cookie domain, SameSite, HttpOnly flag and expiration can be set under **Cookie Settings**.
 
 ## Useful resource
 - https://stape.io/blog/brevo-tag-for-server-google-tag-manager
